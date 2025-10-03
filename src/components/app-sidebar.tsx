@@ -1,7 +1,7 @@
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import { Database, MoreHorizontal, Table } from "lucide-react";
 import type * as React from "react";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
 	Sidebar,
 	SidebarContent,
@@ -70,10 +70,10 @@ export function AppSidebar({
 		onDropTable(tableName);
 	};
 
-	const handleDropTableClick = (tableName: string) => {
+	const handleDropTableClick = useCallback((tableName: string) => {
 		setTableToDrop(tableName);
 		setDialogOpen(true);
-	};
+	}, []);
 
 	const handleConfirmDrop = () => {
 		if (tableToDrop) {
@@ -82,6 +82,18 @@ export function AppSidebar({
 			setTableToDrop(null);
 		}
 	};
+
+	const tableActions = useMemo(
+		() => [
+			{
+				key: "drop",
+				label: "Drop table",
+				onSelect: handleDropTableClick,
+				tone: "destructive" as const,
+			},
+		],
+		[handleDropTableClick],
+	);
 
 	return (
 		<>
@@ -134,14 +146,22 @@ export function AppSidebar({
 											align="end"
 											className="rounded-lg"
 										>
-											<DropdownMenuItem asChild>
-												<Button
-													variant="link"
-													onClick={() => handleDropTableClick(tableName)}
+											{tableActions.map((action) => (
+												<DropdownMenuItem
+													key={action.key}
+													onSelect={(event) => {
+														event.preventDefault();
+														action.onSelect(tableName);
+													}}
+													className={
+														action.tone === "destructive"
+															? "text-destructive focus:text-destructive"
+															: undefined
+													}
 												>
-													Drop table
-												</Button>
-											</DropdownMenuItem>
+													{action.label}
+												</DropdownMenuItem>
+											))}
 										</DropdownMenuContent>
 									</SidebarMenuItem>
 								</DropdownMenu>

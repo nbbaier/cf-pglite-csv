@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { Upload } from "lucide-react";
-import Papa from "papaparse";
 import * as React from "react";
+import { processCSVFile } from "@/lib/csv-processing";
 import { cn } from "@/lib/utils";
 
 const csvUploadVariants = cva(
@@ -131,82 +131,20 @@ const CSVUpload = React.forwardRef<HTMLLabelElement, CSVUploadProps>(
 			}
 		};
 
-		const processFile = (file: File) => {
+		const processFile = async (file: File) => {
 			setIsProcessing(true);
-			setError(null); // Clear any previous errors
-
-			const MAX_ROWS = 10000;
-			const MAX_COLUMNS = 100;
-			const MAX_CELL_SIZE = 10000; // characters
-
-			Papa.parse(file, {
-				complete: (results) => {
-					try {
-						if (!results.data || results.data.length === 0) {
-							throw new Error("CSV file is empty");
-						}
-
-						const rows = results.data as string[][];
-						const headers = rows[0];
-						if (!headers || headers.length === 0) {
-							throw new Error("CSV file has no headers");
-						}
-
-						if (headers.length > MAX_COLUMNS) {
-							throw new Error(
-								`Too many columns. Maximum ${MAX_COLUMNS} allowed.`,
-							);
-						}
-
-						const dataRows = rows
-							.slice(1)
-							.filter((row) => row.some((cell) => cell !== ""));
-
-						if (dataRows.length > MAX_ROWS) {
-							throw new Error(`Too many rows. Maximum ${MAX_ROWS} allowed.`);
-						}
-
-						// Validate cell sizes
-						for (const row of dataRows) {
-							if (row.length !== headers.length) {
-								throw new Error("Row length does not match header column count");
-							}
-							for (const cell of row) {
-								if (cell.length > MAX_CELL_SIZE) {
-									throw new Error(
-										`Cell too large. Maximum ${MAX_CELL_SIZE} characters allowed.`,
-									);
-								}
-							}
-						}
-
-						const tableName = file.name
-							.replace(".csv", "")
-							.replace(/[^a-zA-Z0-9_]/g, "_")
-							.toLowerCase();
-
-						onFileProcessed({
-							tableName,
-							columns: headers,
-							rows: dataRows,
-						});
-
-						processedFileCountRef.current += 1;
-
-						setIsProcessing(false);
-					} catch (err) {
-						setError(
-							err instanceof Error ? err.message : "Failed to process CSV file",
-						);
-						setIsProcessing(false);
-					}
-				},
-				error: (err) => {
-					setError(err.message);
-					setIsProcessing(false);
-				},
-				skipEmptyLines: "greedy",
-			});
+			setError(null);
+			try {
+				const result = await processCSVFile(file);
+				onFileProcessed(result);
+				processedFileCountRef.current += 1;
+			} catch (err) {
+				setError(
+					err instanceof Error ? err.message : "Failed to process CSV file",
+				);
+			} finally {
+				setIsProcessing(false);
+			}
 		};
 
 		const handleDrop = (e: React.DragEvent) => {

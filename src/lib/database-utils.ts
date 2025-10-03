@@ -51,10 +51,14 @@ export async function createTableFromCSV(
 		sanitizedColumns,
 	});
 
-	const columnTypes: PostgresColumnType[] = sanitizedColumns.map((_, columnIndex) => {
-		const columnValues = rows.map((row) => row[columnIndex]?.toString() ?? "");
-		return determineColumnType(columnValues);
-	});
+	const columnTypes: PostgresColumnType[] = sanitizedColumns.map(
+		(_, columnIndex) => {
+			const columnValues = rows.map(
+				(row) => row[columnIndex]?.toString() ?? "",
+			);
+			return determineColumnType(columnValues);
+		},
+	);
 
 	console.debug("[databaseUtils] Column types determined", columnTypes);
 
@@ -95,7 +99,10 @@ export async function createTableFromCSV(
 		.map((c) => `"${c}"`)
 		.join(", ")})`;
 
-	console.debug("[databaseUtils] Preparing insert statement prefix...", insertSQLPrefix);
+	console.debug(
+		"[databaseUtils] Preparing insert statement prefix...",
+		insertSQLPrefix,
+	);
 
 	await db.exec("BEGIN");
 	try {

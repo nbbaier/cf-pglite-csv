@@ -26,10 +26,10 @@ import {
 } from "@/components/ui/sidebar";
 import {
 	dropTable as dropTableService,
+	runQuery as executeQuery,
 	fetchTablePreview,
 	importCSV,
 	listTables,
-	runQuery as executeQuery,
 } from "@/lib/database-service";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";

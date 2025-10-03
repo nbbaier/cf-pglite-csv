@@ -25,9 +25,12 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
-	createTableFromCSV,
-	sanitizeSqlIdentifier,
-} from "@/lib/database-utils";
+	dropTable as dropTableService,
+	fetchTablePreview,
+	importCSV,
+	listTables,
+	runQuery as executeQuery,
+} from "@/lib/database-service";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
 
@@ -39,17 +42,15 @@ const dbGlobal = await PGlite.create({
 export default function Page() {
 	const db = usePGlite(dbGlobal);
 	const [uploadedData, setUploadedData] = useState<Results | null>(null);
-	const [tableList, setTableList] = useState<{ table_name: string }[]>([]);
+	const [tableList, setTableList] = useState<string[]>([]);
 	const [editorContent, setEditorContent] = useState<string>("");
 	const [currentTableName, setCurrentTableName] = useState<string | null>(null);
 
 	useEffect(() => {
 		const loadTables = async () => {
 			try {
-				const tableNames = await db.query<{ table_name: string }>(
-					`SELECT table_name FROM information_schema.tables WHERE table_schema='public'`,
-				);
-				setTableList(tableNames.rows);
+				const tableNames = await listTables(db);
+				setTableList(tableNames);
 			} catch (err) {
 				console.error("[App] Error loading tables:", err);
 			}
@@ -60,13 +61,14 @@ export default function Page() {
 
 	const handleTableClick = async (tableName: string) => {
 		try {
-			const sanitizedTableName = sanitizeSqlIdentifier(tableName);
-			const sql = `SELECT * FROM "${sanitizedTableName}" LIMIT 100`;
-			setEditorContent(sql);
-			const result = await db.query<Record<string, unknown>>(sql);
+			const { result, sanitizedTableName, query } = await fetchTablePreview(
+				db,
+				tableName,
+			);
+			setEditorContent(query);
 			setUploadedData(result);
-			setCurrentTableName(tableName);
-			toast.success(`Loaded data from table "${tableName}"`);
+			setCurrentTableName(sanitizedTableName);
+			toast.success(`Loaded data from table "${sanitizedTableName}"`);
 		} catch (err) {
 			console.error("[App] Error loading table:", err);
 			toast.error(
@@ -89,29 +91,11 @@ export default function Page() {
 		const toastId = toast.loading("Creating table and importing data...");
 
 		try {
-			console.debug("[App] Calling createTableFromCSV...");
-
-			const metadata = await createTableFromCSV(
-				db,
-				data.tableName,
-				data.columns,
-				data.rows,
-			);
-
-			console.debug(
-				"[App] Table created successfully with metadata:",
-				metadata,
-			);
-
-			const result = await db.query<Record<string, unknown>>(
-				`SELECT * FROM "${metadata.sanitizedTableName}" LIMIT 100`,
-			);
-			const tableNames = await db.query<{ table_name: string }>(
-				`SELECT table_name FROM information_schema.tables WHERE table_schema='public'`,
-			);
-			setTableList(tableNames.rows);
-			setUploadedData(result);
+			const { metadata, preview, tables, query } = await importCSV(db, data);
+			setTableList(tables);
+			setUploadedData(preview);
 			setCurrentTableName(metadata.sanitizedTableName);
+			setEditorContent(query);
 
 			toast.success(
 				`Table "${metadata.sanitizedTableName}" created and data imported`,
@@ -133,7 +117,7 @@ export default function Page() {
 	const handleRunQuery = async (query: string) => {
 		try {
 			console.log(query);
-			const result = await db.query<Record<string, unknown>>(query);
+			const result = await executeQuery(db, query);
 			setUploadedData(result);
 			toast.success("Query executed successfully");
 		} catch (err) {
@@ -146,23 +130,23 @@ export default function Page() {
 
 	const handleDropTable = async (tableName: string) => {
 		try {
-			const sanitizedTableName = sanitizeSqlIdentifier(tableName);
-			await db.query(`DROP TABLE IF EXISTS "${sanitizedTableName}"`);
-
-			// Refresh table list
-			const tableNames = await db.query<{ table_name: string }>(
-				`SELECT table_name FROM information_schema.tables WHERE table_schema='public'`,
+			const { tables, sanitizedTableName } = await dropTableService(
+				db,
+				tableName,
 			);
-			setTableList(tableNames.rows);
+			setTableList(tables);
 
 			// Clear data only if the dropped table is currently displayed
-			if (currentTableName === tableName || currentTableName === sanitizedTableName) {
+			if (
+				currentTableName === tableName ||
+				currentTableName === sanitizedTableName
+			) {
 				setUploadedData(null);
 				setEditorContent("");
 				setCurrentTableName(null);
 			}
 
-			toast.success(`Table "${tableName}" dropped successfully`);
+			toast.success(`Table "${sanitizedTableName}" dropped successfully`);
 		} catch (err) {
 			console.error("[App] Error dropping table:", err);
 			toast.error(err instanceof Error ? err.message : "Failed to drop table");

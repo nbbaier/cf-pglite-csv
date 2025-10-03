@@ -39,7 +39,7 @@ type CSVData = {
 
 type AddSidebarProps = {
 	database: PGliteWithLive;
-	tables: { table_name: string }[];
+	tables: string[];
 	onTableClick: (tableName: string) => void;
 	onFileProcessed: (data: {
 		tableName: string;
@@ -107,16 +107,16 @@ export function AppSidebar({
 					<SidebarGroup>
 						<SidebarGroupLabel>Tables</SidebarGroupLabel>
 						<SidebarMenu>
-							{props.tables.map((item) => (
-								<DropdownMenu key={item.table_name}>
-									<SidebarMenuItem key={item.table_name}>
+							{props.tables.map((tableName) => (
+								<DropdownMenu key={tableName}>
+									<SidebarMenuItem key={tableName}>
 										<div className="flex items-center w-full">
 											<SidebarMenuButton
-												onClick={() => handleTableClick(item.table_name)}
+												onClick={() => handleTableClick(tableName)}
 												className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex-1"
 											>
 												<Table />
-												<span>{item.table_name}</span>
+												<span>{tableName}</span>
 											</SidebarMenuButton>
 											<DropdownMenuTrigger asChild>
 												<Button
@@ -137,7 +137,7 @@ export function AppSidebar({
 											<DropdownMenuItem asChild>
 												<Button
 													variant="link"
-													onClick={() => handleDropTableClick(item.table_name)}
+													onClick={() => handleDropTableClick(tableName)}
 												>
 													Drop table
 												</Button>

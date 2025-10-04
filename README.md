@@ -1,6 +1,6 @@
 # CSV Analyzer
 
-A modern web application for analyzing CSV data using an in-browser PostgreSQL database. Built with React, TypeScript, and Vite.
+A modern web application for analyzing CSV data using an in-browser PostgreSQL database with [PGlite](https://pglite.dev/). Built with React, TypeScript, and Vite.
 
 ## Features
 

@@ -116,10 +116,7 @@ const CSVUpload = React.forwardRef<HTMLLabelElement, CSVUploadProps>(
 			if (!multiple) {
 				fileArray = fileArray.slice(0, 1);
 			} else if (maxFiles !== undefined) {
-				const remainingSlots = Math.max(
-					0,
-					maxFiles - processedFileCountRef.current,
-				);
+				const remainingSlots = Math.max(0, maxFiles - processedFileCountRef.current);
 				fileArray = fileArray.slice(0, remainingSlots);
 			}
 
@@ -139,9 +136,7 @@ const CSVUpload = React.forwardRef<HTMLLabelElement, CSVUploadProps>(
 				onFileProcessed(result);
 				processedFileCountRef.current += 1;
 			} catch (err) {
-				setError(
-					err instanceof Error ? err.message : "Failed to process CSV file",
-				);
+				setError(err instanceof Error ? err.message : "Failed to process CSV file");
 			} finally {
 				setIsProcessing(false);
 			}

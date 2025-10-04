@@ -83,7 +83,9 @@ function validateStructure(raw: RawCSV, options: CSVProcessingOptions) {
 
 		for (const cell of row) {
 			if (cell.length > options.maxCellSize) {
-				throw new Error(`Cell too large. Maximum ${options.maxCellSize} characters allowed.`);
+				throw new Error(
+					`Cell too large. Maximum ${options.maxCellSize} characters allowed.`,
+				);
 			}
 		}
 	}

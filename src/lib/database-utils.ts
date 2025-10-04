@@ -51,14 +51,10 @@ export async function createTableFromCSV(
 		sanitizedColumns,
 	});
 
-	const columnTypes: PostgresColumnType[] = sanitizedColumns.map(
-		(_, columnIndex) => {
-			const columnValues = rows.map(
-				(row) => row[columnIndex]?.toString() ?? "",
-			);
-			return determineColumnType(columnValues);
-		},
-	);
+	const columnTypes: PostgresColumnType[] = sanitizedColumns.map((_, columnIndex) => {
+		const columnValues = rows.map((row) => row[columnIndex]?.toString() ?? "");
+		return determineColumnType(columnValues);
+	});
 
 	console.debug("[databaseUtils] Column types determined", columnTypes);
 
@@ -99,10 +95,7 @@ export async function createTableFromCSV(
 		.map((c) => `"${c}"`)
 		.join(", ")})`;
 
-	console.debug(
-		"[databaseUtils] Preparing insert statement prefix...",
-		insertSQLPrefix,
-	);
+	console.debug("[databaseUtils] Preparing insert statement prefix...", insertSQLPrefix);
 
 	await db.exec("BEGIN");
 	try {
@@ -220,18 +213,7 @@ function inferDataType(value: string): PostgresColumnType {
 	}
 
 	const trimmedValue = value.trim().toLowerCase();
-	const booleanValues = [
-		"true",
-		"false",
-		"yes",
-		"no",
-		"1",
-		"0",
-		"t",
-		"f",
-		"y",
-		"n",
-	];
+	const booleanValues = ["true", "false", "yes", "no", "1", "0", "t", "f", "y", "n"];
 	if (booleanValues.includes(trimmedValue)) {
 		return "BOOLEAN";
 	}

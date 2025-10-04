@@ -12,7 +12,11 @@ interface CodeEditorProps {
 	onContentChange?: (content: string) => void;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({ content, onRunQuery, onContentChange }) => {
+export const CodeEditor: React.FC<CodeEditorProps> = ({
+	content,
+	onRunQuery,
+	onContentChange,
+}) => {
 	const [value, setValue] = useState(content);
 	const resolvedTheme = useResolvedTheme();
 

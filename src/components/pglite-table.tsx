@@ -66,7 +66,9 @@ export function PGLiteTable({ data }: { data: Results }) {
 		];
 		const intermediate: ColumnDef<TableRow>[] = data.fields.map((column) => ({
 			accessorKey: column.name,
-			header: ({ column: col }) => <DataTableColumnHeader column={col} title={column.name} />,
+			header: ({ column: col }) => (
+				<DataTableColumnHeader column={col} title={column.name} />
+			),
 			cell: ({ row }) => {
 				const value = row.getValue<string | number | boolean | null>(column.name);
 				const displayValue = value === null ? "" : String(value);

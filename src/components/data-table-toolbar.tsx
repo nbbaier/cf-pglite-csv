@@ -31,7 +31,11 @@ export function DataTableToolbar<TData>({ table }: DataTablePaginationProps<TDat
 				/>
 
 				{isFiltered && (
-					<Button variant="ghost" onClick={() => table.resetGlobalFilter()} className="-ml-2 h-8">
+					<Button
+						variant="ghost"
+						onClick={() => table.resetGlobalFilter()}
+						className="-ml-2 h-8"
+					>
 						<X />
 					</Button>
 				)}

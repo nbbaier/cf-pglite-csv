@@ -14,9 +14,8 @@ type MockDb = {
 };
 
 vi.mock("@/lib/database-utils", async () => {
-	const actual = await vi.importActual<typeof import("@/lib/database-utils")>(
-		"@/lib/database-utils",
-	);
+	const actual =
+		await vi.importActual<typeof import("@/lib/database-utils")>("@/lib/database-utils");
 	return {
 		...actual,
 		createTableFromCSV: vi.fn(),
@@ -46,10 +45,7 @@ describe("listTables", () => {
 			asResults([{ table_name: "users" }, { table_name: "orders" }]),
 		);
 
-		await expect(listTables(asDatabaseClient(db))).resolves.toEqual([
-			"users",
-			"orders",
-		]);
+		await expect(listTables(asDatabaseClient(db))).resolves.toEqual(["users", "orders"]);
 	});
 });
 
@@ -106,9 +102,7 @@ describe("importCSV", () => {
 			throw new Error(`Unexpected SQL: ${sql}`);
 		});
 
-		const createMock = createTableFromCSV as unknown as ReturnType<
-			typeof vi.fn
-		>;
+		const createMock = createTableFromCSV as unknown as ReturnType<typeof vi.fn>;
 		createMock.mockResolvedValue({
 			tableName: "People",
 			sanitizedTableName: "people",
@@ -123,12 +117,7 @@ describe("importCSV", () => {
 			rows: [["Alice"]],
 		});
 
-		expect(createMock).toHaveBeenCalledWith(
-			client,
-			"People",
-			["name"],
-			[["Alice"]],
-		);
+		expect(createMock).toHaveBeenCalledWith(client, "People", ["name"], [["Alice"]]);
 		expect(result.metadata.sanitizedTableName).toBe("people");
 		expect(result.preview).toBe(previewResult);
 		expect(result.tables).toEqual(["people", "orders"]);

@@ -42,7 +42,11 @@ type AddSidebarProps = {
 	database: PGliteWithLive;
 	tables: string[];
 	onTableClick: (tableName: string) => void;
-	onFileProcessed: (data: { tableName: string; columns: string[]; rows: string[][] }) => void;
+	onFileProcessed: (data: {
+		tableName: string;
+		columns: string[];
+		rows: string[][];
+	}) => void;
 	onDropTable: (tableName: string) => void;
 };
 
@@ -178,8 +182,8 @@ export function AppSidebar({
 					<DialogHeader>
 						<DialogTitle>Confirm Drop Table</DialogTitle>
 						<DialogDescription>
-							Are you sure you want to drop the table "{tableToDrop}"? This action cannot be undone
-							and will permanently delete all data in the table.
+							Are you sure you want to drop the table "{tableToDrop}"? This action cannot
+							be undone and will permanently delete all data in the table.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>

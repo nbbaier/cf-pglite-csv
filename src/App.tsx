@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import {
+	ResizableHandle,
+	ResizablePanel,
+	ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
@@ -54,7 +58,10 @@ export default function Page() {
 
 	const handleTableClick = async (tableName: string) => {
 		try {
-			const { result, sanitizedTableName, query } = await fetchTablePreview(db, tableName);
+			const { result, sanitizedTableName, query } = await fetchTablePreview(
+				db,
+				tableName,
+			);
 			setEditorContent(query);
 			setUploadedData(result);
 			setCurrentTableName(sanitizedTableName);
@@ -145,7 +152,10 @@ export default function Page() {
 					<SidebarInset>
 						<header className="flex gap-2 justify-between items-center px-4 h-16 border-b shrink-0">
 							<SidebarTrigger className="-ml-1" />
-							<Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+							<Separator
+								orientation="vertical"
+								className="mr-2 data-[orientation=vertical]:h-4"
+							/>
 							<Breadcrumb>
 								<BreadcrumbList>
 									<BreadcrumbItem>

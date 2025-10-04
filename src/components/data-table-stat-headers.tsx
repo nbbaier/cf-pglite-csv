@@ -21,13 +21,11 @@ export function DataTableStatsHeaders<TData, TValue>({
 				<div className="flex-1 text-sm text-muted-foreground">
 					<div className="block md:hidden">
 						{filteredRowModel.rows.length} ×{" "}
-						{allColumns.filter((column) => column.getIsVisible()).length -
-							1}{" "}
+						{allColumns.filter((column) => column.getIsVisible()).length - 1}{" "}
 					</div>
 					<div className="hidden md:block">
 						{filteredRowModel.rows.length} rows ×{" "}
-						{allColumns.filter((column) => column.getIsVisible()).length - 1}{" "}
-						columns
+						{allColumns.filter((column) => column.getIsVisible()).length - 1} columns
 					</div>
 				</div>
 			</div>
@@ -35,13 +33,12 @@ export function DataTableStatsHeaders<TData, TValue>({
 			<div className="text-sm text-muted-foreground">
 				<div className="flex-1 text-sm text-muted-foreground">
 					<div className="block md:hidden">
-						{" "}
-						{filteredSelectedRowModel.rows.length} /{" "}
-						{filteredRowModel.rows.length} selected
+						{filteredSelectedRowModel.rows.length} / {filteredRowModel.rows.length}{" "}
+						selected
 					</div>
 					<div className="hidden md:block">
-						{filteredSelectedRowModel.rows.length} of{" "}
-						{filteredRowModel.rows.length} row(s) selected
+						{filteredSelectedRowModel.rows.length} of {filteredRowModel.rows.length}{" "}
+						row(s) selected
 					</div>
 				</div>
 			</div>

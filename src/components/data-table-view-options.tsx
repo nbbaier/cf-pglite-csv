@@ -14,12 +14,9 @@ interface DataTableViewOptionsProps<TData> {
 	table: Table<TData>;
 }
 
-export function DataTableViewOptions<TData>({
-	table,
-}: DataTableViewOptionsProps<TData>) {
+export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps<TData>) {
 	const allColumns = table.getAllColumns();
 	const hideableColumns = allColumns.filter((column) => column.getCanHide());
-
 	const allVisible = hideableColumns.every((column) => column.getIsVisible());
 
 	const toggleAllColumns = (value: boolean) => {
@@ -37,10 +34,7 @@ export function DataTableViewOptions<TData>({
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="">
-				<DropdownMenuCheckboxItem
-					checked={allVisible}
-					onCheckedChange={toggleAllColumns}
-				>
+				<DropdownMenuCheckboxItem checked={allVisible} onCheckedChange={toggleAllColumns}>
 					All columns
 				</DropdownMenuCheckboxItem>
 				<DropdownMenuSeparator />
@@ -50,9 +44,7 @@ export function DataTableViewOptions<TData>({
 							key={column.id}
 							// className="capitalize"
 							checked={column.getIsVisible()}
-							onCheckedChange={(value: boolean) =>
-								column.toggleVisibility(!!value)
-							}
+							onCheckedChange={(value: boolean) => column.toggleVisibility(!!value)}
 						>
 							{column.id}
 						</DropdownMenuCheckboxItem>

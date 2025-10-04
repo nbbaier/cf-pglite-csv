@@ -1,6 +1,6 @@
 import Papa from "papaparse";
 
-export type CSVProcessingOptions = {
+type CSVProcessingOptions = {
 	maxRows: number;
 	maxColumns: number;
 	maxCellSize: number;
@@ -12,7 +12,7 @@ const DEFAULT_OPTIONS: CSVProcessingOptions = {
 	maxCellSize: 10_000,
 };
 
-export type CSVPipelineResult = {
+type CSVPipelineResult = {
 	tableName: string;
 	columns: string[];
 	rows: string[][];
@@ -51,9 +51,7 @@ async function parseFile(file: File): Promise<RawCSV> {
 						return;
 					}
 
-					const dataRows = rows
-						.slice(1)
-						.filter((row) => row.some((cell) => cell !== ""));
+					const dataRows = rows.slice(1).filter((row) => row.some((cell) => cell !== ""));
 
 					resolve({ headers, dataRows });
 				} catch (error) {
@@ -85,9 +83,7 @@ function validateStructure(raw: RawCSV, options: CSVProcessingOptions) {
 
 		for (const cell of row) {
 			if (cell.length > options.maxCellSize) {
-				throw new Error(
-					`Cell too large. Maximum ${options.maxCellSize} characters allowed.`,
-				);
+				throw new Error(`Cell too large. Maximum ${options.maxCellSize} characters allowed.`);
 			}
 		}
 	}

@@ -35,7 +35,7 @@ export async function dropTable(db: DatabaseClient, tableName: string) {
 	return { tables, sanitizedTableName };
 }
 
-export type ImportCSVParams = {
+type ImportCSVParams = {
 	tableName: string;
 	columns: string[];
 	rows: string[][];
@@ -43,12 +43,7 @@ export type ImportCSVParams = {
 };
 
 export async function importCSV(db: DatabaseClient, params: ImportCSVParams) {
-	const {
-		tableName,
-		columns,
-		rows,
-		previewLimit = DEFAULT_PREVIEW_LIMIT,
-	} = params;
+	const { tableName, columns, rows, previewLimit = DEFAULT_PREVIEW_LIMIT } = params;
 	const metadata = await createTableFromCSV(db, tableName, columns, rows);
 	const { result: preview, query } = await fetchTablePreview(
 		db,

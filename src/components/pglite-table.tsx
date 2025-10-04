@@ -44,9 +44,7 @@ export function PGLiteTable({ data }: { data: Results }) {
 								table.getIsAllPageRowsSelected() ||
 								(table.getIsSomePageRowsSelected() && "indeterminate")
 							}
-							onCheckedChange={(value) =>
-								table.toggleAllPageRowsSelected(!!value)
-							}
+							onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
 							aria-label="Select all"
 							className="translate-y-[2px]"
 						/>
@@ -68,13 +66,9 @@ export function PGLiteTable({ data }: { data: Results }) {
 		];
 		const intermediate: ColumnDef<TableRow>[] = data.fields.map((column) => ({
 			accessorKey: column.name,
-			header: ({ column: col }) => (
-				<DataTableColumnHeader column={col} title={column.name} />
-			),
+			header: ({ column: col }) => <DataTableColumnHeader column={col} title={column.name} />,
 			cell: ({ row }) => {
-				const value = row.getValue<string | number | boolean | null>(
-					column.name,
-				);
+				const value = row.getValue<string | number | boolean | null>(column.name);
 				const displayValue = value === null ? "" : String(value);
 				return <div className="max-w-[500px] truncate">{displayValue}</div>;
 			},

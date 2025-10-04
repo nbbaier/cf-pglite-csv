@@ -1,7 +1,10 @@
 import { sql } from "@codemirror/lang-sql";
+import { Prec } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useResolvedTheme } from "./theme-provider";
 
 interface CodeEditorProps {
 	content: string;
@@ -9,12 +12,9 @@ interface CodeEditorProps {
 	onContentChange?: (content: string) => void;
 }
 
-export const CodeEditor: React.FC<CodeEditorProps> = ({
-	content,
-	onRunQuery,
-	onContentChange,
-}) => {
+export const CodeEditor: React.FC<CodeEditorProps> = ({ content, onRunQuery, onContentChange }) => {
 	const [value, setValue] = useState(content);
+	const resolvedTheme = useResolvedTheme();
 
 	useEffect(() => {
 		setValue(content);
@@ -29,15 +29,17 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 	const extensions = useMemo(
 		() => [
 			sql(),
-			keymap.of([
-				{
-					key: "Mod-Enter",
-					run: () => {
-						handleRunQuery();
-						return true;
+			Prec.high(
+				keymap.of([
+					{
+						key: "Mod-Enter",
+						run: () => {
+							handleRunQuery();
+							return true;
+						},
 					},
-				},
-			]),
+				]),
+			),
 		],
 		[handleRunQuery],
 	);
@@ -47,6 +49,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 			className="w-full h-full"
 			height="100%"
 			width="100%"
+			theme={resolvedTheme}
 			extensions={extensions}
 			value={value}
 			onChange={(value) => {

@@ -11,7 +11,6 @@ import {
 	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import { Dot } from "lucide-react";
 import { useState } from "react";
 import {
 	Table,
@@ -22,7 +21,8 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { DataTablePagination } from "./data-table-pagination";
+import { DataTableStatsHeaders } from "./data-table-stat-headers";
+import { DataTableToolbar } from "./data-table-toolbar";
 
 interface DataTableProps<TData, TValue> {
 	columns: ColumnDef<TData, TValue>[];
@@ -63,46 +63,19 @@ export function DataTable<TData, TValue>({
 
 	const filteredRowModel = table.getFilteredRowModel();
 	const filteredSelectedRowModel = table.getFilteredSelectedRowModel();
-
 	const allColumns = table.getAllColumns();
 
 	return (
 		<div className={cn("flex flex-col space-y-3 h-full", className)}>
-			<div className="flex flex-shrink-0 items-center pt-3 pr-4 pl-4 space-x-1">
-				<div className="text-sm text-muted-foreground">
-					<div className="flex-1 text-sm text-muted-foreground">
-						<div className="block md:hidden">
-							{filteredRowModel.rows.length} ×{" "}
-							{allColumns.filter((column) => column.getIsVisible()).length -
-								1}{" "}
-						</div>
-						<div className="hidden md:block">
-							{filteredRowModel.rows.length} rows ×{" "}
-							{allColumns.filter((column) => column.getIsVisible()).length - 1}{" "}
-							columns
-						</div>
-					</div>
-				</div>
-				<Dot className="size-4" />
-				<div className="text-sm text-muted-foreground">
-					<div className="flex-1 text-sm text-muted-foreground">
-						<div className="block md:hidden">
-							{" "}
-							{filteredSelectedRowModel.rows.length} /{" "}
-							{filteredRowModel.rows.length} selected
-						</div>
-						<div className="hidden md:block">
-							{filteredSelectedRowModel.rows.length} of{" "}
-							{filteredRowModel.rows.length} row(s) selected
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<DataTablePagination table={table} />
-
+			<DataTableStatsHeaders
+				filteredRowModel={filteredRowModel}
+				filteredSelectedRowModel={filteredSelectedRowModel}
+				allColumns={allColumns}
+				className="pt-3 pr-4 pl-4"
+			/>
+			<DataTableToolbar table={table} />
 			<div className="overflow-auto flex-1 border-t">
-				<Table className="border-b">
+				<Table className="w-full border-b">
 					<TableHeader className="sticky top-0 z-10 bg-background">
 						{table.getHeaderGroups().map((headerGroup) => (
 							<TableRow key={headerGroup.id}>
@@ -111,10 +84,7 @@ export function DataTable<TData, TValue>({
 										<TableHead key={header.id} className="bg-muted">
 											{header.isPlaceholder
 												? null
-												: flexRender(
-														header.column.columnDef.header,
-														header.getContext(),
-													)}
+												: flexRender(header.column.columnDef.header, header.getContext())}
 										</TableHead>
 									);
 								})}
@@ -124,26 +94,17 @@ export function DataTable<TData, TValue>({
 					<TableBody>
 						{table.getRowModel().rows?.length ? (
 							table.getRowModel().rows.map((row) => (
-								<TableRow
-									key={row.id}
-									data-state={row.getIsSelected() && "selected"}
-								>
+								<TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
 									{row.getVisibleCells().map((cell) => (
 										<TableCell key={cell.id}>
-											{flexRender(
-												cell.column.columnDef.cell,
-												cell.getContext(),
-											)}
+											{flexRender(cell.column.columnDef.cell, cell.getContext())}
 										</TableCell>
 									))}
 								</TableRow>
 							))
 						) : (
 							<TableRow>
-								<TableCell
-									colSpan={columns.length}
-									className="h-24 text-center"
-								>
+								<TableCell colSpan={columns.length} className="h-24 text-center">
 									No results.
 								</TableCell>
 							</TableRow>

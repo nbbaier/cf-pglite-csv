@@ -1,11 +1,5 @@
 import type { Table } from "@tanstack/react-table";
-import {
-	ChevronLeft,
-	ChevronRight,
-	ChevronsLeft,
-	ChevronsRight,
-	X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -21,9 +15,7 @@ interface DataTablePaginationProps<TData> {
 	table: Table<TData>;
 }
 
-export function DataTablePagination<TData>({
-	table,
-}: DataTablePaginationProps<TData>) {
+export function DataTableToolbar<TData>({ table }: DataTablePaginationProps<TData>) {
 	const isFiltered = table.getState().globalFilter
 		? table.getState().globalFilter.length > 0
 		: false;
@@ -39,11 +31,7 @@ export function DataTablePagination<TData>({
 				/>
 
 				{isFiltered && (
-					<Button
-						variant="ghost"
-						onClick={() => table.resetGlobalFilter()}
-						className="-ml-2 h-8"
-					>
+					<Button variant="ghost" onClick={() => table.resetGlobalFilter()} className="-ml-2 h-8">
 						<X />
 					</Button>
 				)}

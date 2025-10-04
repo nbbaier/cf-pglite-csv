@@ -15,6 +15,7 @@ import {
 	SidebarRail,
 } from "@/components/ui/sidebar";
 import { CSVUpload } from "./csv-upload";
+import { ModeToggle } from "./mode-toggle";
 import { Button } from "./ui/button";
 import {
 	Dialog,
@@ -41,11 +42,7 @@ type AddSidebarProps = {
 	database: PGliteWithLive;
 	tables: string[];
 	onTableClick: (tableName: string) => void;
-	onFileProcessed: (data: {
-		tableName: string;
-		columns: string[];
-		rows: string[][];
-	}) => void;
+	onFileProcessed: (data: { tableName: string; columns: string[]; rows: string[][] }) => void;
 	onDropTable: (tableName: string) => void;
 };
 
@@ -98,20 +95,20 @@ export function AppSidebar({
 	return (
 		<>
 			<Sidebar {...props}>
-				<SidebarHeader>
+				<SidebarHeader className="border-b h-16">
 					<SidebarMenu>
 						<SidebarMenuItem>
-							<SidebarMenuButton
-								size="lg"
-								className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-							>
-								<div className="flex justify-center items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground aspect-square size-8">
-									<Database className="size-4" />
+							<div className="flex items-center justify-between p-2">
+								<div className="flex items-center gap-2">
+									<div className="flex justify-center items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground aspect-square size-8">
+										<Database className="size-4" />
+									</div>
+									<div className="flex flex-col gap-0.5 leading-none text-base">
+										<span className="font-medium">CSV Analyzer</span>
+									</div>
 								</div>
-								<div className="flex flex-col gap-0.5 leading-none text-base">
-									<span className="font-medium">CSV Analyzer</span>
-								</div>
-							</SidebarMenuButton>
+								<ModeToggle />
+							</div>
 						</SidebarMenuItem>
 					</SidebarMenu>
 				</SidebarHeader>
@@ -141,11 +138,7 @@ export function AppSidebar({
 												</Button>
 											</DropdownMenuTrigger>
 										</div>
-										<DropdownMenuContent
-											side="bottom"
-											align="end"
-											className="rounded-lg"
-										>
+										<DropdownMenuContent side="bottom" align="end" className="rounded-lg">
 											{tableActions.map((action) => (
 												<DropdownMenuItem
 													key={action.key}
@@ -185,9 +178,8 @@ export function AppSidebar({
 					<DialogHeader>
 						<DialogTitle>Confirm Drop Table</DialogTitle>
 						<DialogDescription>
-							Are you sure you want to drop the table "{tableToDrop}"? This
-							action cannot be undone and will permanently delete all data in
-							the table.
+							Are you sure you want to drop the table "{tableToDrop}"? This action cannot be undone
+							and will permanently delete all data in the table.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>

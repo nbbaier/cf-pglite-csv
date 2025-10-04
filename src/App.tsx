@@ -30,6 +30,7 @@ import {
 	importCSV,
 	listTables,
 } from "@/lib/database-service";
+import type { CSVRow } from "./lib/types";
 
 const dbGlobal = await PGlite.create({
 	extensions: { live },
@@ -75,7 +76,7 @@ export default function Page() {
 	const handleFileProcessed = async (data: {
 		tableName: string;
 		columns: string[];
-		rows: string[][];
+		rows: CSVRow[];
 	}) => {
 		console.debug("[App] handleFileProcessed called with:", {
 			tableName: data.tableName,

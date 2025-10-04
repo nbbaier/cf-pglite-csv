@@ -22,6 +22,6 @@
 			"@/*": ["./src/*"]
 		},
 		"skipLibCheck": true,
-		"types": ["@cloudflare/workers-types", "./types/env.d.ts"]
+		"types": ["@cloudflare/workers-types", "./types/env.d.ts", "@types/bun"]
 	}
 }

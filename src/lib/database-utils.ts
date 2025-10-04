@@ -1,10 +1,28 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
+import type { CSVRow } from "./types";
+
+interface ColumnDefinition {
+	name: string;
+	pgType: string;
+	nullable: boolean;
+}
+
+interface TypeInference {
+	hasNull: boolean;
+	hasBoolean: boolean;
+	hasNumber: boolean;
+	hasString: boolean;
+	maxLength: number;
+	hasDecimals: boolean;
+	minValue: number;
+	maxValue: number;
+}
 
 type ColumnMetadata = {
 	originalName: string;
 	sanitizedName: string;
-	type: PostgresColumnType;
+	pgType: string;
 };
 
 type TableMetadata = {
@@ -14,14 +32,24 @@ type TableMetadata = {
 	rowCount: number;
 };
 
-type PostgresColumnType = "TEXT" | "INTEGER" | "REAL" | "DATE" | "BOOLEAN";
+interface CreateTableOptions {
+	includeIfNotExists?: boolean;
+	primaryKeyName?: string;
+}
 
 export function sanitizeSqlIdentifier(identifier: string): string {
-	// Only allow alphanumeric and underscore, must start with letter or underscore
-	const sanitized = identifier.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
-	if (!/^[a-z_]/.test(sanitized)) {
-		return `_${sanitized}`;
+	let sanitized = identifier.trim().replace(/[^a-zA-Z0-9_]/g, "_");
+
+	const needsQuoting =
+		/[^a-z0-9_]/i.test(sanitized) ||
+		/^[0-9]/.test(sanitized) ||
+		isReservedWord(sanitized);
+
+	if (needsQuoting) {
+		sanitized = sanitized.replace(/"/g, '""');
+		return `"${sanitized}"`;
 	}
+
 	return sanitized;
 }
 
@@ -29,206 +57,325 @@ export async function createTableFromCSV(
 	db: PGlite | PGliteWithLive,
 	tableName: string,
 	columns: string[],
-	rows: string[][],
+	rows: CSVRow[],
+	options?: CreateTableOptions,
 ): Promise<TableMetadata> {
-	console.debug("[databaseUtils] createTableFromCSV called", {
-		tableName,
-		columns,
-		rowCount: rows.length,
-	});
-
 	const sanitizedTableName = sanitizeSqlIdentifier(tableName);
-	const seenColumnNames = new Map<string, number>();
-	const sanitizedColumns = columns.map((originalName) => {
-		const baseName = sanitizeSqlIdentifier(originalName);
-		const usageCount = seenColumnNames.get(baseName) ?? 0;
-		seenColumnNames.set(baseName, usageCount + 1);
-		return usageCount === 0 ? baseName : `${baseName}_${usageCount}`;
-	});
 
-	console.debug("[databaseUtils] Sanitized names", {
+	const { includeIfNotExists, primaryKeyName } = options || {};
+
+	const { sql: createTableSQL, columnMetadata } = generateCreateTableStatement(
 		sanitizedTableName,
-		sanitizedColumns,
-	});
+		columns,
+		rows,
+		{ primaryKeyName, includeIfNotExists },
+	);
 
-	const columnTypes: PostgresColumnType[] = sanitizedColumns.map((_, columnIndex) => {
-		const columnValues = rows.map((row) => row[columnIndex]?.toString() ?? "");
-		return determineColumnType(columnValues);
-	});
-
-	console.debug("[databaseUtils] Column types determined", columnTypes);
-
-	if (sanitizedColumns.length === 0) {
-		throw new Error("CSV file must include at least one column header");
-	}
-
-	const columnDefinitions = sanitizedColumns
-		.map((col, i) => `"${col}" ${columnTypes[i]}`)
-		.join(", ");
+	const dropTableSQL = `DROP TABLE IF EXISTS "${sanitizedTableName}" CASCADE`;
+	const insertStatements = rows.map((row) =>
+		generateInsertStatement(sanitizedTableName, columnMetadata, row),
+	);
 
 	const metadata: TableMetadata = {
 		tableName,
 		sanitizedTableName,
-		columns: columns.map((originalName, i) => ({
-			originalName,
-			sanitizedName: sanitizedColumns[i],
-			type: columnTypes[i],
-		})),
+		columns: columnMetadata,
 		rowCount: rows.length,
 	};
 
-	const dropTableSQL = `DROP TABLE IF EXISTS "${sanitizedTableName}" CASCADE`;
-	console.debug("[databaseUtils] Dropping table if exists...");
 	try {
 		await db.exec(dropTableSQL);
-		console.debug("[databaseUtils] Table dropped");
-	} catch (err) {
-		console.debug("[databaseUtils] No table to drop or error:", err);
-	}
-
-	const createTableSQL = `CREATE TABLE IF NOT EXISTS "${sanitizedTableName}" (${columnDefinitions})`;
-	console.debug("[databaseUtils] Creating table...", createTableSQL);
-	await db.exec(createTableSQL);
-	console.debug("[databaseUtils] Table created");
-
-	const insertSQLPrefix = `INSERT INTO "${sanitizedTableName}" (${sanitizedColumns
-		.map((c) => `"${c}"`)
-		.join(", ")})`;
-
-	console.debug("[databaseUtils] Preparing insert statement prefix...", insertSQLPrefix);
-
-	await db.exec("BEGIN");
-	try {
-		if (rows.length === 0) {
-			await db.exec("COMMIT");
-			console.debug("[databaseUtils] No rows to insert; transaction committed");
-			return metadata;
-		}
-
-		const BASE_BATCH_SIZE = 500;
-		const MAX_PARAMS_PER_BATCH = 32000;
-		const columnCount = sanitizedColumns.length;
-		const rowsPerBatch = Math.max(
-			1,
-			Math.min(
-				BASE_BATCH_SIZE,
-				Math.floor(MAX_PARAMS_PER_BATCH / Math.max(1, columnCount)),
-			),
-		);
-		const totalBatches = Math.ceil(rows.length / rowsPerBatch);
-
-		for (let i = 0; i < rows.length; i += rowsPerBatch) {
-			const batch = rows.slice(i, i + rowsPerBatch);
-			console.debug(
-				`[databaseUtils] Processing batch ${Math.floor(i / rowsPerBatch) + 1} of ${totalBatches}`,
-			);
-
-			const batchPlaceholders: string[] = [];
-			const batchValues: Array<string | number | boolean | null> = [];
-
-			batch.forEach((row, rowIndex) => {
-				const convertedValues = columnTypes.map((type, columnIndex) => {
-					const val = row[columnIndex];
-					if (val === "" || val === null || val === undefined) {
-						return null;
-					}
-					if (type === "INTEGER" || type === "REAL") {
-						const num = Number(val);
-						return Number.isNaN(num) ? null : num;
-					}
-					if (type === "BOOLEAN") {
-						const trimmedVal = val.toString().trim().toLowerCase();
-						return ["true", "yes", "1", "t", "y"].includes(trimmedVal);
-					}
-					return val.toString();
-				});
-
-				batchValues.push(...convertedValues);
-				const placeholderOffset = rowIndex * columnCount;
-				const rowPlaceholders = sanitizedColumns.map((_, columnIndex) => {
-					return `$${placeholderOffset + columnIndex + 1}`;
-				});
-				batchPlaceholders.push(`(${rowPlaceholders.join(", ")})`);
+		await db.exec(createTableSQL);
+		await db.transaction(async (tx) => {
+			insertStatements.forEach(async (statement) => {
+				await tx.query(statement.sql, statement.values);
 			});
-
-			if (batchPlaceholders.length > 0) {
-				const insertSQL = `${insertSQLPrefix} VALUES ${batchPlaceholders.join(", ")}`;
-				await db.query(insertSQL, batchValues);
-			}
-		}
-
-		await db.exec("COMMIT");
-		console.debug("[databaseUtils] All rows inserted successfully");
+		});
 	} catch (err) {
-		await db.exec("ROLLBACK");
-		console.error("[databaseUtils] Transaction failed, rolling back:", err);
-		throw err;
+		throw new Error(
+			`No table to drop or error: ${err instanceof Error ? err.message : String(err)}`,
+			{ cause: err },
+		);
 	}
-
 	return metadata;
 }
-function determineColumnType(columnValues: string[]): PostgresColumnType {
-	const nonEmptyValues = columnValues.filter(
-		(v) => v !== "" && v !== null && v !== undefined,
-	);
 
-	if (nonEmptyValues.length === 0) {
-		return "TEXT";
-	}
+function inferColumnType(columnName: string, rows: CSVRow[]): ColumnDefinition {
+	const inference: TypeInference = {
+		hasNull: false,
+		hasBoolean: false,
+		hasNumber: false,
+		hasString: false,
+		maxLength: 0,
+		hasDecimals: false,
+		minValue: Infinity,
+		maxValue: -Infinity,
+	};
 
-	const sampleSize = Math.min(100, nonEmptyValues.length);
-	const typeCounts: Partial<Record<PostgresColumnType, number>> = {};
+	for (const row of rows) {
+		const value = row[columnName];
 
-	for (let i = 0; i < sampleSize; i++) {
-		const type = inferDataType(nonEmptyValues[i]);
-		typeCounts[type] = (typeCounts[type] ?? 0) + 1;
+		if (value === null || value === undefined || value === "") {
+			inference.hasNull = true;
+			continue;
+		}
 
-		if (typeCounts.TEXT && typeCounts.TEXT > sampleSize * 0.1) {
-			return "TEXT";
+		if (typeof value === "boolean") {
+			inference.hasBoolean = true;
+		} else if (typeof value === "number") {
+			inference.hasNumber = true;
+			inference.minValue = Math.min(inference.minValue, value);
+			inference.maxValue = Math.max(inference.maxValue, value);
+
+			if (!Number.isInteger(value)) {
+				inference.hasDecimals = true;
+			}
+		} else if (typeof value === "string") {
+			inference.hasString = true;
+			inference.maxLength = Math.max(inference.maxLength, value.length);
 		}
 	}
 
-	if (typeCounts.BOOLEAN && typeCounts.BOOLEAN === sampleSize) {
-		return "BOOLEAN";
+	let pgType: string;
+
+	// If we have mixed types with strings, default to text
+	if (inference.hasString && (inference.hasNumber || inference.hasBoolean)) {
+		pgType = "text";
+	}
+	// Pure boolean column
+	else if (inference.hasBoolean && !inference.hasNumber && !inference.hasString) {
+		pgType = "boolean";
+	}
+	// Pure numeric column
+	else if (inference.hasNumber && !inference.hasBoolean && !inference.hasString) {
+		if (inference.hasDecimals) {
+			pgType = "numeric";
+		} else {
+			// Choose integer type based on range
+			if (inference.minValue >= -32768 && inference.maxValue <= 32767) {
+				pgType = "smallint";
+			} else if (inference.minValue >= -2147483648 && inference.maxValue <= 2147483647) {
+				pgType = "integer";
+			} else {
+				pgType = "bigint";
+			}
+		}
+	}
+	// Pure string column
+	else if (inference.hasString && !inference.hasNumber && !inference.hasBoolean) {
+		// Use text for long strings or variable length, varchar for shorter fixed-ish lengths
+		if (inference.maxLength > 255) {
+			pgType = "text";
+		} else if (inference.maxLength > 0) {
+			// Add some buffer to the max length (20% or minimum 10 chars)
+			const bufferLength = Math.max(
+				Math.ceil(inference.maxLength * 1.2),
+				inference.maxLength + 10,
+			);
+			pgType = `varchar(${Math.min(bufferLength, 255)})`;
+		} else {
+			pgType = "text";
+		}
+	}
+	// All nulls or empty - default to text
+	else {
+		pgType = "text";
 	}
 
-	if (typeCounts.REAL) {
-		return "REAL";
-	}
-
-	if (typeCounts.INTEGER) {
-		return "INTEGER";
-	}
-
-	if (typeCounts.DATE) {
-		return "DATE";
-	}
-
-	return "TEXT";
+	return {
+		name: columnName,
+		pgType,
+		nullable: inference.hasNull,
+	};
 }
 
-function inferDataType(value: string): PostgresColumnType {
-	if (value === "" || value === null || value === undefined) {
-		return "TEXT";
-	}
+function isReservedWord(word: string): boolean {
+	const reserved = new Set([
+		"select",
+		"from",
+		"where",
+		"insert",
+		"update",
+		"delete",
+		"create",
+		"drop",
+		"alter",
+		"table",
+		"index",
+		"view",
+		"user",
+		"group",
+		"order",
+		"by",
+		"limit",
+		"offset",
+		"join",
+		"inner",
+		"outer",
+		"left",
+		"right",
+		"on",
+		"as",
+		"and",
+		"or",
+		"not",
+		"null",
+		"true",
+		"false",
+		"default",
+		"primary",
+		"foreign",
+		"key",
+		"references",
+		"constraint",
+		"unique",
+		"check",
+		"cascade",
+		"restrict",
+		"grant",
+		"revoke",
+		"commit",
+		"rollback",
+	]);
+	return reserved.has(word.toLowerCase());
+}
 
-	const trimmedValue = value.trim().toLowerCase();
-	const booleanValues = ["true", "false", "yes", "no", "1", "0", "t", "f", "y", "n"];
-	if (booleanValues.includes(trimmedValue)) {
-		return "BOOLEAN";
-	}
+function findBestPrimaryKeyColumn(
+	columns: ColumnDefinition[],
+	rows: CSVRow[],
+	fallbackName: string,
+): string {
+	// Common primary key column name patterns (case-insensitive)
+	const primaryKeyPatterns = [
+		/^id$/i,
+		/^pk$/i,
+		/^key$/i,
+		/^uuid$/i,
+		/^guid$/i,
+		/^.*_id$/i,
+		/^.*_key$/i,
+		/^.*_uuid$/i,
+		/^.*_guid$/i,
+	];
 
-	if (!Number.isNaN(Number(value)) && value.trim() !== "") {
-		if (value.includes(".")) {
-			return "REAL";
+	// First, look for columns that match common primary key patterns
+	for (const column of columns) {
+		if (primaryKeyPatterns.some((pattern) => pattern.test(column.name))) {
+			// Check if this column has unique values and no nulls
+			if (isColumnSuitableForPrimaryKey(column, rows)) {
+				return column.name;
+			}
 		}
-		return "INTEGER";
 	}
 
-	const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-	if (datePattern.test(value)) {
-		return "DATE";
+	// Second, look for any column that's suitable as a primary key
+	for (const column of columns) {
+		if (isColumnSuitableForPrimaryKey(column, rows)) {
+			return column.name;
+		}
 	}
 
-	return "TEXT";
+	// Fall back to the provided name
+	return fallbackName;
+}
+
+function isColumnSuitableForPrimaryKey(
+	column: ColumnDefinition,
+	rows: CSVRow[],
+): boolean {
+	if (column.nullable) {
+		return false;
+	}
+
+	const suitableTypes = ["integer", "bigint", "smallint", "text", "varchar"];
+	if (!suitableTypes.some((type) => column.pgType.startsWith(type))) {
+		return false;
+	}
+
+	const values = new Set();
+	let hasNulls = false;
+
+	for (const row of rows) {
+		const value = row[column.name];
+		if (value === null || value === undefined || value === "") {
+			hasNulls = true;
+			break;
+		}
+		values.add(value);
+	}
+
+	return !hasNulls && values.size === rows.length;
+}
+
+function generateCreateTableStatement(
+	sanitizedTableName: string,
+	headers: string[],
+	rows: CSVRow[],
+	options?: CreateTableOptions,
+): { sql: string; columnMetadata: ColumnMetadata[] } {
+	if (rows.length === 0) {
+		throw new Error("Cannot generate table definition from empty dataset");
+	}
+
+	const { includeIfNotExists = true, primaryKeyName = "csv_id" } = options || {};
+
+	const columnNames = new Set<string>(headers);
+
+	const columns: ColumnDefinition[] = Array.from(columnNames).map((colName) =>
+		inferColumnType(colName, rows),
+	);
+
+	let sql = `CREATE TABLE ${includeIfNotExists ? "IF NOT EXISTS " : ""}${sanitizedTableName} (\n`;
+
+	// Find the best existing column for primary key, or use fallback
+	const primaryKeyColumn = findBestPrimaryKeyColumn(columns, rows, primaryKeyName);
+
+	// Check if we found an existing suitable column
+	const existingColumn = columns.find((col) => col.name === primaryKeyColumn);
+
+	if (existingColumn) {
+		// Use existing column as primary key
+		sql += `  ${sanitizeSqlIdentifier(primaryKeyColumn)} ${existingColumn.pgType} PRIMARY KEY,\n`;
+	} else {
+		// Add new serial primary key column
+		sql += `  ${sanitizeSqlIdentifier(primaryKeyName)} serial PRIMARY KEY,\n`;
+	}
+
+	// Filter out the column that's being used as primary key to avoid duplication
+	const columnsToDefine = columns.filter((col) => col.name !== primaryKeyColumn);
+
+	const columnDefs = columnsToDefine.map((col) => {
+		const colName = sanitizeSqlIdentifier(col.name);
+		const nullable = col.nullable ? "" : " NOT NULL";
+		return `  ${colName} ${col.pgType}${nullable}`;
+	});
+
+	sql += columnDefs.join(",\n");
+	sql += "\n);";
+
+	const columnMetadata = columns.map((col) => ({
+		originalName: col.name,
+		sanitizedName: sanitizeSqlIdentifier(col.name) || col.name,
+		pgType: col.pgType,
+	}));
+
+	return { sql, columnMetadata };
+}
+
+function generateInsertStatement(
+	sanitizedTableName: string,
+	columns: ColumnMetadata[],
+	data: CSVRow,
+): {
+	sql: string;
+	values: (string | number | boolean)[];
+} {
+	const placeholders = Object.keys(data)
+		.map((_, index) => `$${index + 1}`)
+		.join(", ");
+	const columnNames = columns.map((c) => c.sanitizedName).join(", ");
+	return {
+		sql: `INSERT INTO ${sanitizedTableName} (${columnNames}) VALUES (${placeholders})`,
+		values: Object.values(data),
+	};
 }

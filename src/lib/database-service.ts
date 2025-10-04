@@ -1,6 +1,7 @@
 import type { PGlite, Results } from "@electric-sql/pglite";
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import { createTableFromCSV, sanitizeSqlIdentifier } from "./database-utils";
+import type { CSVRow } from "./types";
 
 type DatabaseClient = PGlite | PGliteWithLive;
 
@@ -25,7 +26,9 @@ export async function fetchTablePreview(
 }
 
 export async function runQuery(db: DatabaseClient, query: string) {
-	return db.query<Record<string, unknown>>(query);
+	const result = await db.query<Record<string, unknown>>(query);
+	console.log(result);
+	return result;
 }
 
 export async function dropTable(db: DatabaseClient, tableName: string) {
@@ -38,7 +41,7 @@ export async function dropTable(db: DatabaseClient, tableName: string) {
 type ImportCSVParams = {
 	tableName: string;
 	columns: string[];
-	rows: string[][];
+	rows: CSVRow[];
 	previewLimit?: number;
 };
 

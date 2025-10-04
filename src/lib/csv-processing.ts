@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import type { CSVRow } from "./types";
 
 type CSVProcessingOptions = {
 	maxRows: number;
@@ -15,12 +16,12 @@ const DEFAULT_OPTIONS: CSVProcessingOptions = {
 type CSVPipelineResult = {
 	tableName: string;
 	columns: string[];
-	rows: string[][];
+	rows: CSVRow[];
 };
 
 type RawCSV = {
 	headers: string[];
-	dataRows: string[][];
+	rows: CSVRow[];
 };
 
 export async function processCSVFile(
@@ -35,8 +36,10 @@ export async function processCSVFile(
 
 async function parseFile(file: File): Promise<RawCSV> {
 	return new Promise((resolve, reject) => {
-		Papa.parse<string[]>(file, {
+		Papa.parse(file, {
 			skipEmptyLines: "greedy",
+			dynamicTyping: true,
+			header: true,
 			complete: (results) => {
 				try {
 					if (!results.data || results.data.length === 0) {
@@ -44,16 +47,14 @@ async function parseFile(file: File): Promise<RawCSV> {
 						return;
 					}
 
-					const rows = results.data as string[][];
-					const headers = rows[0];
+					const rows = results.data as CSVRow[];
+					const headers = results.meta.fields;
 					if (!headers || headers.length === 0) {
 						reject(new Error("CSV file has no headers"));
 						return;
 					}
 
-					const dataRows = rows.slice(1).filter((row) => row.some((cell) => cell !== ""));
-
-					resolve({ headers, dataRows });
+					resolve({ headers, rows });
 				} catch (error) {
 					reject(error);
 				}
@@ -66,28 +67,14 @@ async function parseFile(file: File): Promise<RawCSV> {
 }
 
 function validateStructure(raw: RawCSV, options: CSVProcessingOptions) {
-	const { headers, dataRows } = raw;
+	const { headers, rows } = raw;
 
 	if (headers.length > options.maxColumns) {
 		throw new Error(`Too many columns. Maximum ${options.maxColumns} allowed.`);
 	}
 
-	if (dataRows.length > options.maxRows) {
+	if (rows.length > options.maxRows) {
 		throw new Error(`Too many rows. Maximum ${options.maxRows} allowed.`);
-	}
-
-	for (const row of dataRows) {
-		if (row.length !== headers.length) {
-			throw new Error("Row length does not match header column count");
-		}
-
-		for (const cell of row) {
-			if (cell.length > options.maxCellSize) {
-				throw new Error(
-					`Cell too large. Maximum ${options.maxCellSize} characters allowed.`,
-				);
-			}
-		}
 	}
 }
 
@@ -100,6 +87,6 @@ function normalizeData(file: File, raw: RawCSV): CSVPipelineResult {
 	return {
 		tableName,
 		columns: raw.headers,
-		rows: raw.dataRows,
+		rows: raw.rows,
 	};
 }

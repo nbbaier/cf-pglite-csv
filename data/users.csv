@@ -1,0 +1,6 @@
+User ID,Name,Email,Age,Country,Enrolled,Birthday
+1,John Doe,john.doe@example.com,30,USA,true,1/1/2090
+2,Jane Smith,jane.smith@example.com,25,Canada,false,1995-01-01
+3,Bob Johnson,bob.johnson@example.com,35,UK,false,1/1/2090
+4,Alice Williams,alice.williams@example.com,28,Australia,true,1/1/2090
+5,Michael Brown,michael.brown@example.com,40,USA,false,1/1/2090

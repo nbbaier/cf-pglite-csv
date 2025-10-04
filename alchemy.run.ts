@@ -9,6 +9,7 @@ const app = await alchemy("csv-analyzer", {
 });
 
 export const worker = await Vite("app", {
+	name: "csv-analyzer",
 	entrypoint: "src/worker.ts",
 });
 

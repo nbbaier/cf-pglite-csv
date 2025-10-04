@@ -14,6 +14,7 @@ import {
 	SidebarMenuItem,
 	SidebarRail,
 } from "@/components/ui/sidebar";
+import type { CSVRow } from "@/lib/types";
 import { CSVUpload } from "./csv-upload";
 import { ModeToggle } from "./mode-toggle";
 import { Button } from "./ui/button";
@@ -35,7 +36,7 @@ import {
 type CSVData = {
 	tableName: string;
 	columns: string[];
-	rows: string[][];
+	rows: CSVRow[];
 };
 
 type AddSidebarProps = {
@@ -45,7 +46,7 @@ type AddSidebarProps = {
 	onFileProcessed: (data: {
 		tableName: string;
 		columns: string[];
-		rows: string[][];
+		rows: CSVRow[];
 	}) => void;
 	onDropTable: (tableName: string) => void;
 };

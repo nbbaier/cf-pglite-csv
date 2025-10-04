@@ -2,6 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Upload } from "lucide-react";
 import * as React from "react";
 import { processCSVFile } from "@/lib/csv-processing";
+import type { CSVRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const csvUploadVariants = cva(
@@ -32,7 +33,7 @@ interface CSVUploadProps
 	onFileProcessed: (data: {
 		tableName: string;
 		columns: string[];
-		rows: string[][];
+		rows: CSVRow[];
 	}) => void;
 	multiple?: boolean;
 	maxSize?: number;

@@ -114,7 +114,7 @@ describe("importCSV", () => {
 		const result = await importCSV(client, {
 			tableName: "People",
 			columns: ["name"],
-			rows: [["Alice"]],
+			rows: [{ name: "Alice" }],
 		});
 
 		expect(createMock).toHaveBeenCalledWith(client, "People", ["name"], [["Alice"]]);

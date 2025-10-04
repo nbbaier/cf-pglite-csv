@@ -1,0 +1,4 @@
+id,name,age,active,salary,email,phone
+1,John Doe,30,true,50000.5,, 123-456-7890
+2,Jane Smith,25,false,60000,, 123-456-7890
+3,Bob Johnson,35,true,75000.75,bob.johnson@example.com, 123-456-7890

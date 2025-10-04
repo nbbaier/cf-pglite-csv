@@ -1,7 +1,7 @@
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import { Database, MoreHorizontal, Table } from "lucide-react";
 import type * as React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 import {
 	Sidebar,
 	SidebarContent,
@@ -71,10 +71,10 @@ export function AppSidebar({
 		onDropTable(tableName);
 	};
 
-	const handleDropTableClick = useCallback((tableName: string) => {
+	const handleDropTableClick = (tableName: string) => {
 		setTableToDrop(tableName);
 		setDialogOpen(true);
-	}, []);
+	};
 
 	const handleConfirmDrop = () => {
 		if (tableToDrop) {
@@ -84,17 +84,14 @@ export function AppSidebar({
 		}
 	};
 
-	const tableActions = useMemo(
-		() => [
-			{
-				key: "drop",
-				label: "Drop table",
-				onSelect: handleDropTableClick,
-				tone: "destructive" as const,
-			},
-		],
-		[handleDropTableClick],
-	);
+	const tableActions = [
+		{
+			key: "drop",
+			label: "Drop table",
+			onSelect: handleDropTableClick,
+			tone: "destructive" as const,
+		},
+	];
 
 	return (
 		<>
@@ -126,7 +123,7 @@ export function AppSidebar({
 										<div className="flex items-center w-full">
 											<SidebarMenuButton
 												onClick={() => handleTableClick(tableName)}
-												className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex-1"
+												className="font-mono text-sm data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground flex-1"
 											>
 												<Table />
 												<span>{tableName}</span>

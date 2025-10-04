@@ -3,7 +3,7 @@ import { Prec } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useResolvedTheme } from "./theme-provider";
 
 interface CodeEditorProps {
@@ -24,29 +24,26 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 		setValue(content);
 	}, [content]);
 
-	const handleRunQuery = useCallback(() => {
+	const handleRunQuery = () => {
 		if (onRunQuery && value.trim()) {
 			onRunQuery(value);
 		}
-	}, [value, onRunQuery]);
+	};
 
-	const extensions = useMemo(
-		() => [
-			sql(),
-			Prec.high(
-				keymap.of([
-					{
-						key: "Mod-Enter",
-						run: () => {
-							handleRunQuery();
-							return true;
-						},
+	const extensions = [
+		sql(),
+		Prec.high(
+			keymap.of([
+				{
+					key: "Mod-Enter",
+					run: () => {
+						handleRunQuery();
+						return true;
 					},
-				]),
-			),
-		],
-		[handleRunQuery],
-	);
+				},
+			]),
+		),
+	];
 
 	return (
 		<CodeMirror

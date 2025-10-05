@@ -10,7 +10,7 @@ const app = await alchemy("csv-analyzer", {
 });
 
 export const worker = await Vite("app", {
-	name: "csv-analyzer",
+	name: `${app.name}${app.stage === "nbbaier" ? "" : `-${app.stage}`}`,
 	entrypoint: "src/worker.ts",
 });
 

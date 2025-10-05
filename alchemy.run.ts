@@ -14,9 +14,7 @@ export const worker = await Vite("app", {
 	entrypoint: "src/worker.ts",
 });
 
-console.log({
-	url: worker.url,
-});
+console.log(`🚀 ${app.name} deployed to ${worker.url}`);
 
 if (process.env.PULL_REQUEST) {
 	await GitHubComment("preview-comment", {

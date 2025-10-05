@@ -44,19 +44,24 @@ interface CreateTableOptions {
 }
 
 export function sanitizeSqlIdentifier(identifier: string): string {
-	let sanitized = identifier.trim().replace(/[^a-zA-Z0-9_]/g, "_");
+	let sanitized = identifier
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9_]/g, "_");
 
-	const needsQuoting =
-		/[^a-z0-9_]/i.test(sanitized) ||
-		/^[0-9]/.test(sanitized) ||
-		isReservedWord(sanitized);
+	if (/^[0-9]/.test(sanitized)) {
+		sanitized = `_${sanitized}`;
+	}
 
-	if (needsQuoting) {
-		sanitized = sanitized.replace(/"/g, '""');
-		return `"${sanitized}"`;
+	if (isReservedWord(sanitized)) {
+		sanitized = `${sanitized}_col`;
 	}
 
 	return sanitized;
+}
+
+export function quoteIdent(identifier: string): string {
+	return `"${identifier.replace(/"/g, '""')}"`;
 }
 
 export async function createTableFromCSV(
@@ -77,7 +82,7 @@ export async function createTableFromCSV(
 		{ primaryKeyName, includeIfNotExists },
 	);
 
-	const dropTableSQL = `DROP TABLE IF EXISTS "${sanitizedTableName}" CASCADE`;
+	const dropTableSQL = `DROP TABLE IF EXISTS ${quoteIdent(sanitizedTableName)} CASCADE`;
 	const insertStatements = rows.map((row) =>
 		generateInsertStatement(sanitizedTableName, columnMetadata, row),
 	);
@@ -92,21 +97,25 @@ export async function createTableFromCSV(
 	try {
 		await db.exec(dropTableSQL);
 		await db.exec(createTableSQL);
+
+		const BATCH_SIZE = 500;
 		await db.transaction(async (tx) => {
-			insertStatements.forEach(async (statement) => {
-				await tx.query(statement.sql, statement.values);
-			});
+			for (let i = 0; i < insertStatements.length; i += BATCH_SIZE) {
+				const batch = insertStatements.slice(i, i + BATCH_SIZE);
+				await Promise.all(
+					batch.map((statement) => tx.query(statement.sql, statement.values)),
+				);
+			}
 		});
 	} catch (err) {
 		throw new Error(
-			`No table to drop or error: ${err instanceof Error ? err.message : String(err)}`,
+			`Failed to import table ${tableName}: ${err instanceof Error ? err.message : String(err)}`,
 			{ cause: err },
 		);
 	}
 	return metadata;
 }
 
-// Helper functions for type detection
 function isDateString(value: string): boolean {
 	// Common date patterns: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, etc.
 	const datePatterns = [
@@ -173,7 +182,6 @@ function isSequential(values: (number | string)[]): boolean {
 
 	if (numericValues.length < 3) return false;
 
-	// Check if values are sequential (difference of 1 between consecutive values)
 	for (let i = 1; i < numericValues.length; i++) {
 		if (numericValues[i] - numericValues[i - 1] !== 1) {
 			return false;
@@ -210,7 +218,6 @@ function inferColumnPgType(columnName: string, rows: CSVRow[]): ColumnDefinition
 			continue;
 		}
 
-		// Collect non-null values for sequential analysis
 		if (typeof value === "string" || typeof value === "number") {
 			values.push(value);
 		}
@@ -229,7 +236,6 @@ function inferColumnPgType(columnName: string, rows: CSVRow[]): ColumnDefinition
 			inference.hasString = true;
 			inference.maxLength = Math.max(inference.maxLength, value.length);
 
-			// Check for temporal and UUID patterns
 			if (isDateString(value)) {
 				inference.hasDate = true;
 			} else if (isTimeString(value)) {
@@ -242,7 +248,6 @@ function inferColumnPgType(columnName: string, rows: CSVRow[]): ColumnDefinition
 		}
 	}
 
-	// Check if values are sequential (for auto-increment detection)
 	if (values.length > 0) {
 		inference.isSequential = isSequential(values);
 	}
@@ -250,32 +255,22 @@ function inferColumnPgType(columnName: string, rows: CSVRow[]): ColumnDefinition
 	let pgType: string;
 	let isAutoIncrement = false;
 
-	// Check for temporal types first (highest priority)
 	if (inference.hasTimestamp) {
 		pgType = "timestamp";
 	} else if (inference.hasDate && !inference.hasTime) {
 		pgType = "date";
 	} else if (inference.hasTime && !inference.hasDate) {
 		pgType = "time";
-	}
-	// Check for UUID
-	else if (inference.hasUUID && !inference.hasString) {
+	} else if (inference.hasUUID && !inference.hasString) {
 		pgType = "uuid";
-	}
-	// If we have mixed types with strings, default to text
-	else if (inference.hasString && (inference.hasNumber || inference.hasBoolean)) {
+	} else if (inference.hasString && (inference.hasNumber || inference.hasBoolean)) {
 		pgType = "text";
-	}
-	// Pure boolean column
-	else if (inference.hasBoolean && !inference.hasNumber && !inference.hasString) {
+	} else if (inference.hasBoolean && !inference.hasNumber && !inference.hasString) {
 		pgType = "boolean";
-	}
-	// Pure numeric column
-	else if (inference.hasNumber && !inference.hasBoolean && !inference.hasString) {
+	} else if (inference.hasNumber && !inference.hasBoolean && !inference.hasString) {
 		if (inference.hasDecimals) {
 			pgType = "numeric";
 		} else {
-			// Choose integer type based on range
 			if (inference.minValue >= -32768 && inference.maxValue <= 32767) {
 				pgType = "smallint";
 			} else if (inference.minValue >= -2147483648 && inference.maxValue <= 2147483647) {
@@ -284,14 +279,10 @@ function inferColumnPgType(columnName: string, rows: CSVRow[]): ColumnDefinition
 				pgType = "bigint";
 			}
 		}
-	}
-	// Pure string column
-	else if (inference.hasString && !inference.hasNumber && !inference.hasBoolean) {
-		// Use text for long strings or variable length, varchar for shorter fixed-ish lengths
+	} else if (inference.hasString && !inference.hasNumber && !inference.hasBoolean) {
 		if (inference.maxLength > 255) {
 			pgType = "text";
 		} else if (inference.maxLength > 0) {
-			// Add some buffer to the max length (20% or minimum 10 chars)
 			const bufferLength = Math.max(
 				Math.ceil(inference.maxLength * 1.2),
 				inference.maxLength + 10,
@@ -300,13 +291,10 @@ function inferColumnPgType(columnName: string, rows: CSVRow[]): ColumnDefinition
 		} else {
 			pgType = "text";
 		}
-	}
-	// All nulls or empty - default to text
-	else {
+	} else {
 		pgType = "text";
 	}
 
-	// Check for auto-increment (sequential integers starting from 1)
 	if (
 		inference.isSequential &&
 		inference.hasNumber &&
@@ -315,7 +303,6 @@ function inferColumnPgType(columnName: string, rows: CSVRow[]): ColumnDefinition
 		!inference.hasBoolean &&
 		inference.minValue >= 1
 	) {
-		// Determine appropriate serial type
 		if (inference.maxValue <= 32767) {
 			pgType = "smallserial";
 		} else if (inference.maxValue <= 2147483647) {
@@ -390,7 +377,6 @@ function findBestPrimaryKeyColumn(
 	rows: CSVRow[],
 	fallbackName: string,
 ): string {
-	// Common primary key column name patterns (case-insensitive)
 	const primaryKeyPatterns = [
 		/^id$/i,
 		/^pk$/i,
@@ -403,24 +389,20 @@ function findBestPrimaryKeyColumn(
 		/^.*_guid$/i,
 	];
 
-	// First, look for columns that match common primary key patterns
 	for (const column of columns) {
 		if (primaryKeyPatterns.some((pattern) => pattern.test(column.name))) {
-			// Check if this column has unique values and no nulls
 			if (isColumnSuitableForPrimaryKey(column, rows)) {
 				return column.name;
 			}
 		}
 	}
 
-	// Second, look for any column that's suitable as a primary key
 	for (const column of columns) {
 		if (isColumnSuitableForPrimaryKey(column, rows)) {
 			return column.name;
 		}
 	}
 
-	// Fall back to the provided name
 	return fallbackName;
 }
 
@@ -479,29 +461,26 @@ function generateCreateTableStatement(
 		inferColumnPgType(colName, rows),
 	);
 
-	let sql = `CREATE TABLE ${includeIfNotExists ? "IF NOT EXISTS " : ""}${sanitizedTableName} (\n`;
+	let sql = `CREATE TABLE ${includeIfNotExists ? "IF NOT EXISTS " : ""}${quoteIdent(sanitizedTableName)} (\n`;
 
-	// Find the best existing column for primary key, or use fallback
 	const primaryKeyColumn = findBestPrimaryKeyColumn(columns, rows, primaryKeyName);
 
-	// Check if we found an existing suitable column
 	const existingColumn = columns.find((col) => col.name === primaryKeyColumn);
 
 	if (existingColumn) {
-		// Use existing column as primary key
-		sql += `  ${sanitizeSqlIdentifier(primaryKeyColumn)} ${existingColumn.pgType} PRIMARY KEY,\n`;
+		const pkSanitized = sanitizeSqlIdentifier(primaryKeyColumn);
+		sql += `  ${quoteIdent(pkSanitized)} ${existingColumn.pgType} PRIMARY KEY,\n`;
 	} else {
-		// Add new serial primary key column
-		sql += `  ${sanitizeSqlIdentifier(primaryKeyName)} serial PRIMARY KEY,\n`;
+		const pkSanitized = sanitizeSqlIdentifier(primaryKeyName);
+		sql += `  ${quoteIdent(pkSanitized)} serial PRIMARY KEY,\n`;
 	}
 
-	// Filter out the column that's being used as primary key to avoid duplication
 	const columnsToDefine = columns.filter((col) => col.name !== primaryKeyColumn);
 
 	const columnDefs = columnsToDefine.map((col) => {
 		const colName = sanitizeSqlIdentifier(col.name);
 		const nullable = col.nullable ? "" : " NOT NULL";
-		return `  ${colName} ${col.pgType}${nullable}`;
+		return `  ${quoteIdent(colName)} ${col.pgType}${nullable}`;
 	});
 
 	sql += columnDefs.join(",\n");
@@ -524,12 +503,12 @@ function generateInsertStatement(
 	sql: string;
 	values: (string | number | boolean)[];
 } {
-	const placeholders = Object.keys(data)
-		.map((_, index) => `$${index + 1}`)
-		.join(", ");
-	const columnNames = columns.map((c) => c.sanitizedName).join(", ");
+	const placeholders = columns.map((_, index) => `$${index + 1}`).join(", ");
+	const columnNames = columns.map((c) => quoteIdent(c.sanitizedName)).join(", ");
+	const values = columns.map((c) => data[c.originalName] as string | number | boolean);
+
 	return {
-		sql: `INSERT INTO ${sanitizedTableName} (${columnNames}) VALUES (${placeholders})`,
-		values: Object.values(data),
+		sql: `INSERT INTO ${quoteIdent(sanitizedTableName)} (${columnNames}) VALUES (${placeholders})`,
+		values,
 	};
 }

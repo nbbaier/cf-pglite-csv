@@ -1,6 +1,6 @@
 import type { PGlite, Results } from "@electric-sql/pglite";
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
-import { createTableFromCSV, sanitizeSqlIdentifier } from "./database-utils";
+import { createTableFromCSV, quoteIdent, sanitizeSqlIdentifier } from "./database-utils";
 import type { CSVRow } from "./types";
 
 type DatabaseClient = PGlite | PGliteWithLive;
@@ -21,19 +21,25 @@ export async function fetchTablePreview(
 ) {
 	const sanitized = sanitizeSqlIdentifier(tableName);
 	const safeLimit = Math.min(Math.max(1, limit), 10000);
-	const query = `SELECT * FROM "${sanitized}" LIMIT ${safeLimit}`;
+	const query = `SELECT * FROM ${quoteIdent(sanitized)} LIMIT ${safeLimit}`;
 	const result: Results = await db.query<Record<string, unknown>>(query);
 	return { result, sanitizedTableName: sanitized, query };
 }
 
+const MAX_QUERY_ROWS = 50000;
+
 export async function runQuery(db: DatabaseClient, query: string) {
 	const result = await db.query<Record<string, unknown>>(query);
-	console.log(result);
 
-	// Add safety check for large result sets
+	if (result.rows && result.rows.length > MAX_QUERY_ROWS) {
+		throw new Error(
+			`Query returned ${result.rows.length} rows, which exceeds the maximum of ${MAX_QUERY_ROWS}. Please add a LIMIT clause to your query.`,
+		);
+	}
+
 	if (result.rows && result.rows.length > 10000) {
 		console.warn(
-			`Large result set detected: ${result.rows.length} rows. Consider adding LIMIT to your query.`,
+			`Large result set: ${result.rows.length} rows. Consider adding LIMIT for better performance.`,
 		);
 	}
 
@@ -42,7 +48,7 @@ export async function runQuery(db: DatabaseClient, query: string) {
 
 export async function dropTable(db: DatabaseClient, tableName: string) {
 	const sanitizedTableName = sanitizeSqlIdentifier(tableName);
-	await db.query(`DROP TABLE IF EXISTS "${sanitizedTableName}"`);
+	await db.query(`DROP TABLE IF EXISTS ${quoteIdent(sanitizedTableName)}`);
 	const tables = await listTables(db);
 	return { tables, sanitizedTableName };
 }
@@ -91,10 +97,11 @@ FROM
     LEFT JOIN information_schema.table_constraints pk ON ku.constraint_name = pk.constraint_name
     AND pk.constraint_type = 'PRIMARY KEY'
 WHERE
-    c.table_name = '${sanitizedTableName}'
+    c.table_schema = 'public'
+    AND c.table_name = $1
 ORDER BY
     c.ordinal_position;`;
 
-	const result = await db.query<Record<string, unknown>>(query);
+	const result = await db.query<Record<string, unknown>>(query, [sanitizedTableName]);
 	return result;
 }

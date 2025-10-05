@@ -9,7 +9,7 @@ import {
 	EmptyTitle,
 } from "@/components/ui/empty";
 import type { CSVPipelineResult } from "@/lib/csv-processing";
-import { CSVUpload } from "./csv-upload";
+import { CSVUploadButton } from "./csv-upload-button";
 
 interface NoDataProps {
 	onRunSampleQuery?: () => void;
@@ -30,11 +30,11 @@ export function NoData({ onRunSampleQuery, onFileProcessed }: NoDataProps) {
 				</EmptyDescription>
 			</EmptyHeader>
 			<EmptyContent>
-				<div className="flex flex-col items-center gap-4 w-full max-w-md">
+				<div className="flex items-center gap-4">
 					{onRunSampleQuery && (
 						<Button onClick={onRunSampleQuery}>Run Sample Query</Button>
 					)}
-					<CSVUpload size="sm" onFileProcessed={onFileProcessed} multiple={false} />
+					<CSVUploadButton onFileProcessed={onFileProcessed} multiple={false} />
 				</div>
 			</EmptyContent>
 		</Empty>

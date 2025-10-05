@@ -183,7 +183,7 @@ export default function Page() {
 						onDropTable={handleDropTable}
 						onGetSchema={handleGetSchema}
 					/>
-					<SidebarInset>
+					<SidebarInset className="overflow-hidden">
 						<header className="flex gap-2 justify-between items-center px-4 h-16 border-b shrink-0">
 							<SidebarTrigger className="-ml-1" />
 							<Separator

@@ -19,8 +19,6 @@ console.log({
 });
 
 if (process.env.PULL_REQUEST) {
-	// if this is a PR, add a comment to the PR with the preview URL
-	// it will auto-update with each push
 	await GitHubComment("preview-comment", {
 		owner: "nbbaier",
 		repository: "cf-pglite-csv",

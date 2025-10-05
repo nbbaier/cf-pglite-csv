@@ -61,3 +61,31 @@ export async function importCSV(db: DatabaseClient, params: ImportCSVParams) {
 		tables,
 	};
 }
+
+export async function getSchema(db: DatabaseClient, tableName: string) {
+	const sanitizedTableName = sanitizeSqlIdentifier(tableName);
+
+	const query = `SELECT
+    c.column_name,
+    c.data_type,
+    c.character_maximum_length,
+    c.is_nullable,
+    c.column_default,
+    CASE
+        WHEN pk.constraint_type = 'PRIMARY KEY' THEN 'YES'
+        ELSE 'NO'
+    END AS is_primary_key
+FROM
+    information_schema.columns c
+    LEFT JOIN information_schema.key_column_usage ku ON c.table_name = ku.table_name
+    AND c.column_name = ku.column_name
+    LEFT JOIN information_schema.table_constraints pk ON ku.constraint_name = pk.constraint_name
+    AND pk.constraint_type = 'PRIMARY KEY'
+WHERE
+    c.table_name = '${sanitizedTableName}'
+ORDER BY
+    c.ordinal_position;`;
+
+	const result = await db.query<Record<string, unknown>>(query);
+	return result;
+}

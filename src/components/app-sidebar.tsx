@@ -16,16 +16,10 @@ import {
 } from "@/components/ui/sidebar";
 import type { CSVRow } from "@/lib/types";
 import { CSVUpload } from "./csv-upload";
+import { DropTableDialog } from "./drop-table-dialog";
 import { ModeToggle } from "./mode-toggle";
+import { SchemaDialog } from "./schema-dialog";
 import { Button } from "./ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "./ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -39,6 +33,15 @@ type CSVData = {
 	rows: CSVRow[];
 };
 
+export type SchemaData = {
+	column_name: string;
+	data_type: string;
+	character_maximum_length: string | null;
+	is_nullable: string;
+	column_default: string | null;
+	is_primary_key: string;
+};
+
 type AddSidebarProps = {
 	database: PGliteWithLive;
 	tables: string[];
@@ -49,16 +52,22 @@ type AddSidebarProps = {
 		rows: CSVRow[];
 	}) => void;
 	onDropTable: (tableName: string) => void;
+	onGetSchema: (tableName: string) => Promise<SchemaData[]>;
 };
 
 export function AppSidebar({
 	onTableClick,
 	onFileProcessed,
 	onDropTable,
+	onGetSchema,
 	...props
 }: AddSidebarProps & React.ComponentProps<typeof Sidebar>) {
-	const [dialogOpen, setDialogOpen] = useState(false);
+	const [dropDialogOpen, setDropDialogOpen] = useState(false);
 	const [tableToDrop, setTableToDrop] = useState<string | null>(null);
+	const [schemaDialogOpen, setSchemaDialogOpen] = useState(false);
+	const [schemaData, setSchemaData] = useState<SchemaData[]>([]);
+	const [schemaTableName, setSchemaTableName] = useState<string | null>(null);
+	const [schemaLoading, setSchemaLoading] = useState(false);
 
 	const handleTableClick = (tableName: string) => {
 		onTableClick(tableName);
@@ -74,13 +83,27 @@ export function AppSidebar({
 
 	const handleDropTableClick = (tableName: string) => {
 		setTableToDrop(tableName);
-		setDialogOpen(true);
+		setDropDialogOpen(true);
+	};
+
+	const handleGetSchema = async (tableName: string) => {
+		setSchemaLoading(true);
+		setSchemaTableName(tableName);
+		try {
+			const schema = await onGetSchema(tableName);
+			setSchemaData(schema);
+			setSchemaDialogOpen(true);
+		} catch (error) {
+			console.error("Error fetching schema:", error);
+		} finally {
+			setSchemaLoading(false);
+		}
 	};
 
 	const handleConfirmDrop = () => {
 		if (tableToDrop) {
 			handleDropTable(tableToDrop);
-			setDialogOpen(false);
+			setDropDialogOpen(false);
 			setTableToDrop(null);
 		}
 	};
@@ -91,6 +114,11 @@ export function AppSidebar({
 			label: "Drop table",
 			onSelect: handleDropTableClick,
 			tone: "destructive" as const,
+		},
+		{
+			key: "schema",
+			label: "Get schema",
+			onSelect: handleGetSchema,
 		},
 	];
 
@@ -175,25 +203,19 @@ export function AppSidebar({
 				</SidebarFooter>
 				<SidebarRail />
 			</Sidebar>
-			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Confirm Drop Table</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to drop the table "{tableToDrop}"? This action cannot
-							be undone and will permanently delete all data in the table.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setDialogOpen(false)}>
-							Cancel
-						</Button>
-						<Button variant="destructive" onClick={handleConfirmDrop}>
-							Drop Table
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			<DropTableDialog
+				dialogOpen={dropDialogOpen}
+				setDialogOpen={setDropDialogOpen}
+				tableToDrop={tableToDrop || ""}
+				handleConfirmDrop={handleConfirmDrop}
+			/>
+			<SchemaDialog
+				dialogOpen={schemaDialogOpen}
+				setDialogOpen={setSchemaDialogOpen}
+				schemaTableName={schemaTableName || ""}
+				schemaData={schemaData}
+				schemaLoading={schemaLoading}
+			/>
 		</>
 	);
 }

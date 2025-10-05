@@ -1,10 +1,11 @@
 import { PGlite, type Results } from "@electric-sql/pglite";
 import { live } from "@electric-sql/pglite/live";
 import { PGliteProvider, usePGlite } from "@electric-sql/pglite-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppSidebar } from "@/components/app-sidebar";
 import { CodeEditor } from "@/components/editor";
+import { NoData } from "@/components/empty-data";
 import { PGLiteTable } from "@/components/pglite-table";
 import { ThemeProvider } from "@/components/theme-provider";
 import {
@@ -23,14 +24,16 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { processCSVFile } from "@/lib/csv-processing";
 import {
 	dropTable as dropTableService,
 	runQuery as executeQuery,
 	fetchTablePreview,
+	getSchema as getSchemaService,
 	importCSV,
 	listTables,
 } from "@/lib/database-service";
-import type { CSVRow } from "./lib/types";
+import type { CSVRow } from "@/lib/types";
 
 const dbGlobal = await PGlite.create({
 	extensions: { live },
@@ -43,6 +46,7 @@ export default function Page() {
 	const [tableList, setTableList] = useState<string[]>([]);
 	const [editorContent, setEditorContent] = useState<string>("");
 	const [currentTableName, setCurrentTableName] = useState<string | null>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		const loadTables = async () => {
@@ -63,14 +67,24 @@ export default function Page() {
 				db,
 				tableName,
 			);
-			setEditorContent(query);
-			setUploadedData(result);
-			setCurrentTableName(sanitizedTableName);
+
+			React.startTransition(() => {
+				setEditorContent(query);
+				setUploadedData(result);
+				setCurrentTableName(sanitizedTableName);
+			});
+
 			toast.success(`Loaded data from table "${sanitizedTableName}"`);
 		} catch (err) {
 			console.error("[App] Error loading table:", err);
 			toast.error(err instanceof Error ? err.message : "Failed to load table data");
 		}
+	};
+
+	const handleRunSampleQuery = () => {
+		const sampleQuery = "SELECT 'hello world' as message";
+		setEditorContent(sampleQuery);
+		handleRunQuery(sampleQuery);
 	};
 
 	const handleFileProcessed = async (data: {
@@ -88,10 +102,13 @@ export default function Page() {
 
 		try {
 			const { metadata, preview, tables, query } = await importCSV(db, data);
-			setTableList(tables);
-			setUploadedData(preview);
-			setCurrentTableName(metadata.sanitizedTableName);
-			setEditorContent(query);
+
+			React.startTransition(() => {
+				setTableList(tables);
+				setUploadedData(preview);
+				setCurrentTableName(metadata.sanitizedTableName);
+				setEditorContent(query);
+			});
 
 			toast.success(`Table "${metadata.sanitizedTableName}" created and data imported`, {
 				id: toastId,
@@ -101,7 +118,6 @@ export default function Page() {
 		} catch (err) {
 			console.error("[App] Error during upload:", err);
 
-			// Dismiss loading toast and show error
 			toast.error(err instanceof Error ? err.message : "Failed to process CSV file", {
 				id: toastId,
 			});
@@ -112,7 +128,11 @@ export default function Page() {
 		try {
 			console.log(query);
 			const result = await executeQuery(db, query);
-			setUploadedData(result);
+
+			React.startTransition(() => {
+				setUploadedData(result);
+			});
+
 			toast.success("Query executed successfully");
 		} catch (err) {
 			console.error("[App] Error executing query:", err);
@@ -123,19 +143,61 @@ export default function Page() {
 	const handleDropTable = async (tableName: string) => {
 		try {
 			const { tables, sanitizedTableName } = await dropTableService(db, tableName);
-			setTableList(tables);
 
-			// Clear data only if the dropped table is currently displayed
-			if (currentTableName === tableName || currentTableName === sanitizedTableName) {
-				setUploadedData(null);
-				setEditorContent("");
-				setCurrentTableName(null);
-			}
+			React.startTransition(() => {
+				setTableList(tables);
+
+				if (currentTableName === tableName || currentTableName === sanitizedTableName) {
+					setUploadedData(null);
+					setEditorContent("");
+					setCurrentTableName(null);
+				}
+			});
 
 			toast.success(`Table "${sanitizedTableName}" dropped successfully`);
 		} catch (err) {
 			console.error("[App] Error dropping table:", err);
 			toast.error(err instanceof Error ? err.message : "Failed to drop table");
+		}
+	};
+
+	const handleUploadClick = () => {
+		fileInputRef.current?.click();
+	};
+
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = e.target.files;
+		if (files && files.length > 0) {
+			const file = files[0];
+
+			processCSVFile(file)
+				.then(handleFileProcessed)
+				.catch((err) => {
+					console.error("Error processing CSV file:", err);
+					toast.error(err instanceof Error ? err.message : "Failed to process CSV file");
+				});
+		}
+
+		e.target.value = "";
+	};
+
+	const handleGetSchema = async (tableName: string) => {
+		try {
+			const result = await getSchemaService(db, tableName);
+
+			const schemaData = result.rows || [];
+			return schemaData as Array<{
+				column_name: string;
+				data_type: string;
+				character_maximum_length: string | null;
+				is_nullable: string;
+				column_default: string | null;
+				is_primary_key: string;
+			}>;
+		} catch (error) {
+			console.error("Error fetching schema:", error);
+			toast.error("Failed to fetch table schema");
+			throw error;
 		}
 	};
 
@@ -149,6 +211,7 @@ export default function Page() {
 						onTableClick={handleTableClick}
 						onFileProcessed={handleFileProcessed}
 						onDropTable={handleDropTable}
+						onGetSchema={handleGetSchema}
 					/>
 					<SidebarInset>
 						<header className="flex gap-2 justify-between items-center px-4 h-16 border-b shrink-0">
@@ -194,8 +257,11 @@ export default function Page() {
 									{uploadedData ? (
 										<PGLiteTable data={uploadedData} />
 									) : (
-										<div className="flex justify-center items-center h-full text-muted-foreground">
-											<p>No data loaded. Upload a CSV or run a query to see results.</p>
+										<div className="flex justify-center items-center h-full">
+											<NoData
+												onUploadClick={handleUploadClick}
+												onRunSampleQuery={handleRunSampleQuery}
+											/>
 										</div>
 									)}
 								</div>
@@ -203,6 +269,13 @@ export default function Page() {
 						</ResizablePanelGroup>
 					</SidebarInset>
 				</SidebarProvider>
+				<input
+					ref={fileInputRef}
+					type="file"
+					accept=".csv,text/csv,application/csv"
+					onChange={handleFileChange}
+					className="hidden"
+				/>
 				<Toaster />
 			</PGliteProvider>
 		</ThemeProvider>

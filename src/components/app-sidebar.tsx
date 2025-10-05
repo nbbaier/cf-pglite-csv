@@ -131,9 +131,9 @@ export function AppSidebar({
 							<div className="flex items-center justify-between p-2">
 								<div className="flex items-center gap-2">
 									<div className="flex justify-center items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground aspect-square size-8">
-										<Database className="size-4" />
+										<Database className="size-6" />
 									</div>
-									<div className="flex flex-col gap-0.5 leading-none text-base">
+									<div className="text-xl font-bold flex flex-col gap-0.5 leading-none">
 										<span className="font-medium">CSV Analyzer</span>
 									</div>
 								</div>

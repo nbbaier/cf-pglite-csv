@@ -6,6 +6,7 @@ interface ColumnDefinition {
 	name: string;
 	pgType: string;
 	nullable: boolean;
+	isAutoIncrement?: boolean;
 }
 
 interface TypeInference {
@@ -17,6 +18,11 @@ interface TypeInference {
 	hasDecimals: boolean;
 	minValue: number;
 	maxValue: number;
+	hasDate: boolean;
+	hasTime: boolean;
+	hasTimestamp: boolean;
+	hasUUID: boolean;
+	isSequential: boolean;
 }
 
 type ColumnMetadata = {
@@ -100,7 +106,84 @@ export async function createTableFromCSV(
 	return metadata;
 }
 
-function inferColumnType(columnName: string, rows: CSVRow[]): ColumnDefinition {
+// Helper functions for type detection
+function isDateString(value: string): boolean {
+	// Common date patterns: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY, etc.
+	const datePatterns = [
+		/^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
+		/^\d{2}\/\d{2}\/\d{4}$/, // MM/DD/YYYY
+		/^\d{2}\/\d{2}\/\d{2}$/, // MM/DD/YY
+		/^\d{1,2}\/\d{1,2}\/\d{4}$/, // M/D/YYYY
+		/^\d{4}\/\d{1,2}\/\d{1,2}$/, // YYYY/M/D
+	];
+
+	if (!datePatterns.some((pattern) => pattern.test(value))) {
+		return false;
+	}
+
+	// Try to parse as date to validate
+	const date = new Date(value);
+	return !Number.isNaN(date.getTime());
+}
+
+function isTimeString(value: string): boolean {
+	// Time patterns: HH:MM:SS, HH:MM, H:MM:SS AM/PM
+	const timePatterns = [
+		/^\d{1,2}:\d{2}:\d{2}$/, // HH:MM:SS
+		/^\d{1,2}:\d{2}$/, // HH:MM
+		/^\d{1,2}:\d{2}:\d{2}\s*(AM|PM|am|pm)$/, // H:MM:SS AM/PM
+		/^\d{1,2}:\d{2}\s*(AM|PM|am|pm)$/, // H:MM AM/PM
+	];
+
+	return timePatterns.some((pattern) => pattern.test(value));
+}
+
+function isTimestampString(value: string): boolean {
+	// Timestamp patterns: ISO 8601, common formats
+	const timestampPatterns = [
+		/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/, // ISO 8601
+		/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, // YYYY-MM-DD HH:MM:SS
+		/^\d{2}\/\d{2}\/\d{4} \d{1,2}:\d{2}:\d{2}$/, // MM/DD/YYYY HH:MM:SS
+		/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/, // With milliseconds
+	];
+
+	if (!timestampPatterns.some((pattern) => pattern.test(value))) {
+		return false;
+	}
+
+	// Try to parse as date to validate
+	const date = new Date(value);
+	return !Number.isNaN(date.getTime());
+}
+
+function isUUIDString(value: string): boolean {
+	// UUID v4 pattern
+	const uuidPattern =
+		/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+	return uuidPattern.test(value);
+}
+
+function isSequential(values: (number | string)[]): boolean {
+	const numericValues = values
+		.filter(
+			(v) => typeof v === "number" || (typeof v === "string" && !Number.isNaN(Number(v))),
+		)
+		.map((v) => Number(v))
+		.sort((a, b) => a - b);
+
+	if (numericValues.length < 3) return false;
+
+	// Check if values are sequential (difference of 1 between consecutive values)
+	for (let i = 1; i < numericValues.length; i++) {
+		if (numericValues[i] - numericValues[i - 1] !== 1) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function inferColumnPgType(columnName: string, rows: CSVRow[]): ColumnDefinition {
 	const inference: TypeInference = {
 		hasNull: false,
 		hasBoolean: false,
@@ -110,7 +193,14 @@ function inferColumnType(columnName: string, rows: CSVRow[]): ColumnDefinition {
 		hasDecimals: false,
 		minValue: Infinity,
 		maxValue: -Infinity,
+		hasDate: false,
+		hasTime: false,
+		hasTimestamp: false,
+		hasUUID: false,
+		isSequential: false,
 	};
+
+	const values: (number | string)[] = [];
 
 	for (const row of rows) {
 		const value = row[columnName];
@@ -118,6 +208,11 @@ function inferColumnType(columnName: string, rows: CSVRow[]): ColumnDefinition {
 		if (value === null || value === undefined || value === "") {
 			inference.hasNull = true;
 			continue;
+		}
+
+		// Collect non-null values for sequential analysis
+		if (typeof value === "string" || typeof value === "number") {
+			values.push(value);
 		}
 
 		if (typeof value === "boolean") {
@@ -133,13 +228,42 @@ function inferColumnType(columnName: string, rows: CSVRow[]): ColumnDefinition {
 		} else if (typeof value === "string") {
 			inference.hasString = true;
 			inference.maxLength = Math.max(inference.maxLength, value.length);
+
+			// Check for temporal and UUID patterns
+			if (isDateString(value)) {
+				inference.hasDate = true;
+			} else if (isTimeString(value)) {
+				inference.hasTime = true;
+			} else if (isTimestampString(value)) {
+				inference.hasTimestamp = true;
+			} else if (isUUIDString(value)) {
+				inference.hasUUID = true;
+			}
 		}
 	}
 
-	let pgType: string;
+	// Check if values are sequential (for auto-increment detection)
+	if (values.length > 0) {
+		inference.isSequential = isSequential(values);
+	}
 
+	let pgType: string;
+	let isAutoIncrement = false;
+
+	// Check for temporal types first (highest priority)
+	if (inference.hasTimestamp) {
+		pgType = "timestamp";
+	} else if (inference.hasDate && !inference.hasTime) {
+		pgType = "date";
+	} else if (inference.hasTime && !inference.hasDate) {
+		pgType = "time";
+	}
+	// Check for UUID
+	else if (inference.hasUUID && !inference.hasString) {
+		pgType = "uuid";
+	}
 	// If we have mixed types with strings, default to text
-	if (inference.hasString && (inference.hasNumber || inference.hasBoolean)) {
+	else if (inference.hasString && (inference.hasNumber || inference.hasBoolean)) {
 		pgType = "text";
 	}
 	// Pure boolean column
@@ -182,10 +306,31 @@ function inferColumnType(columnName: string, rows: CSVRow[]): ColumnDefinition {
 		pgType = "text";
 	}
 
+	// Check for auto-increment (sequential integers starting from 1)
+	if (
+		inference.isSequential &&
+		inference.hasNumber &&
+		!inference.hasDecimals &&
+		!inference.hasString &&
+		!inference.hasBoolean &&
+		inference.minValue >= 1
+	) {
+		// Determine appropriate serial type
+		if (inference.maxValue <= 32767) {
+			pgType = "smallserial";
+		} else if (inference.maxValue <= 2147483647) {
+			pgType = "serial";
+		} else {
+			pgType = "bigserial";
+		}
+		isAutoIncrement = true;
+	}
+
 	return {
 		name: columnName,
 		pgType,
 		nullable: inference.hasNull,
+		isAutoIncrement,
 	};
 }
 
@@ -287,7 +432,16 @@ function isColumnSuitableForPrimaryKey(
 		return false;
 	}
 
-	const suitableTypes = ["integer", "bigint", "smallint", "text", "varchar"];
+	const suitableTypes = [
+		"integer",
+		"bigint",
+		"smallint",
+		"serial",
+		"bigserial",
+		"smallserial",
+		"text",
+		"varchar",
+	];
 	if (!suitableTypes.some((type) => column.pgType.startsWith(type))) {
 		return false;
 	}
@@ -322,7 +476,7 @@ function generateCreateTableStatement(
 	const columnNames = new Set<string>(headers);
 
 	const columns: ColumnDefinition[] = Array.from(columnNames).map((colName) =>
-		inferColumnType(colName, rows),
+		inferColumnPgType(colName, rows),
 	);
 
 	let sql = `CREATE TABLE ${includeIfNotExists ? "IF NOT EXISTS " : ""}${sanitizedTableName} (\n`;

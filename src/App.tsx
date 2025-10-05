@@ -1,7 +1,7 @@
 import { PGlite, type Results } from "@electric-sql/pglite";
 import { live } from "@electric-sql/pglite/live";
 import { PGliteProvider, usePGlite } from "@electric-sql/pglite-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppSidebar } from "@/components/app-sidebar";
 import { CodeEditor } from "@/components/editor";
@@ -24,7 +24,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
-import { processCSVFile } from "@/lib/csv-processing";
+import type { CSVPipelineResult } from "@/lib/csv-processing";
 import {
 	dropTable as dropTableService,
 	runQuery as executeQuery,
@@ -46,7 +46,6 @@ export default function Page() {
 	const [tableList, setTableList] = useState<string[]>([]);
 	const [editorContent, setEditorContent] = useState<string>("");
 	const [currentTableName, setCurrentTableName] = useState<string | null>(null);
-	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		const loadTables = async () => {
@@ -87,17 +86,7 @@ export default function Page() {
 		handleRunQuery(sampleQuery);
 	};
 
-	const handleFileProcessed = async (data: {
-		tableName: string;
-		columns: string[];
-		rows: CSVRow[];
-	}) => {
-		console.debug("[App] handleFileProcessed called with:", {
-			tableName: data.tableName,
-			columns: data.columns,
-			rowCount: data.rows.length,
-		});
-
+	const handleFileProcessed = async (data: CSVPipelineResult) => {
 		const toastId = toast.loading("Creating table and importing data...");
 
 		try {
@@ -259,8 +248,8 @@ export default function Page() {
 									) : (
 										<div className="flex justify-center items-center h-full">
 											<NoData
-												onUploadClick={handleUploadClick}
 												onRunSampleQuery={handleRunSampleQuery}
+												onFileProcessed={handleFileProcessed}
 											/>
 										</div>
 									)}
@@ -269,13 +258,6 @@ export default function Page() {
 						</ResizablePanelGroup>
 					</SidebarInset>
 				</SidebarProvider>
-				<input
-					ref={fileInputRef}
-					type="file"
-					accept=".csv,text/csv,application/csv"
-					onChange={handleFileChange}
-					className="hidden"
-				/>
 				<Toaster />
 			</PGliteProvider>
 		</ThemeProvider>

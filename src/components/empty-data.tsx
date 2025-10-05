@@ -1,6 +1,4 @@
 import { Table } from "lucide-react";
-import { useRef } from "react";
-
 import { Button } from "@/components/ui/button";
 import {
 	Empty,
@@ -10,13 +8,15 @@ import {
 	EmptyMedia,
 	EmptyTitle,
 } from "@/components/ui/empty";
+import type { CSVPipelineResult } from "@/lib/csv-processing";
+import { CSVUpload } from "./csv-upload";
 
 interface NoDataProps {
-	onUploadClick?: () => void;
 	onRunSampleQuery?: () => void;
+	onFileProcessed: (data: CSVPipelineResult) => void;
 }
 
-export function NoData({ onUploadClick, onRunSampleQuery }: NoDataProps) {
+export function NoData({ onRunSampleQuery, onFileProcessed }: NoDataProps) {
 	return (
 		<Empty>
 			<EmptyHeader>
@@ -30,11 +30,11 @@ export function NoData({ onUploadClick, onRunSampleQuery }: NoDataProps) {
 				</EmptyDescription>
 			</EmptyHeader>
 			<EmptyContent>
-				<div className="flex gap-2">
-					<Button onClick={onRunSampleQuery}>Run Sample Query</Button>
-					<Button variant="outline" onClick={onUploadClick}>
-						Upload CSV
-					</Button>
+				<div className="flex flex-col items-center gap-4 w-full max-w-md">
+					{onRunSampleQuery && (
+						<Button onClick={onRunSampleQuery}>Run Sample Query</Button>
+					)}
+					<CSVUpload size="sm" onFileProcessed={onFileProcessed} multiple={false} />
 				</div>
 			</EmptyContent>
 		</Empty>

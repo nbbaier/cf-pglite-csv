@@ -10,22 +10,31 @@ type PGLiteRow = Record<string, unknown>;
 
 export function PGLiteTable({ data }: { data: Results }) {
 	const tableData = useMemo<TableRow[]>(() => {
-		const processed = data.rows.map((row) => {
+		if (!data?.rows || !Array.isArray(data.rows) || data.rows.length === 0) {
+			return [];
+		}
+
+		const maxRows = 10000;
+		const rowsToProcess = data.rows.slice(0, maxRows);
+
+		const processed = rowsToProcess.map((row) => {
 			const pgliteRow = row as PGLiteRow;
 			const rowObject: TableRow = {};
 
-			data.fields.forEach((column) => {
-				const value = pgliteRow[column.name];
-				if (value === undefined || value === null) {
-					rowObject[column.name] = null;
-				} else if (typeof value === "boolean") {
-					rowObject[column.name] = value;
-				} else if (typeof value === "number") {
-					rowObject[column.name] = value;
-				} else {
-					rowObject[column.name] = String(value);
-				}
-			});
+			if (data.fields && Array.isArray(data.fields)) {
+				data.fields.forEach((column) => {
+					const value = pgliteRow[column.name];
+					if (value === undefined || value === null) {
+						rowObject[column.name] = null;
+					} else if (typeof value === "boolean") {
+						rowObject[column.name] = value;
+					} else if (typeof value === "number") {
+						rowObject[column.name] = value;
+					} else {
+						rowObject[column.name] = String(value);
+					}
+				});
+			}
 
 			return rowObject;
 		});
@@ -34,6 +43,10 @@ export function PGLiteTable({ data }: { data: Results }) {
 	}, [data.fields, data.rows]);
 
 	const columns = useMemo<ColumnDef<TableRow>[]>(() => {
+		if (!data?.fields || !Array.isArray(data.fields) || data.fields.length === 0) {
+			return [];
+		}
+
 		const select: ColumnDef<TableRow>[] = [
 			{
 				id: "select",
@@ -64,7 +77,12 @@ export function PGLiteTable({ data }: { data: Results }) {
 				enableHiding: false,
 			},
 		];
-		const intermediate: ColumnDef<TableRow>[] = data.fields.map((column) => ({
+
+		// Limit columns to prevent UI issues
+		const maxColumns = 50;
+		const fieldsToProcess = data.fields.slice(0, maxColumns);
+
+		const intermediate: ColumnDef<TableRow>[] = fieldsToProcess.map((column) => ({
 			accessorKey: column.name,
 			header: ({ column: col }) => (
 				<DataTableColumnHeader column={col} title={column.name} />

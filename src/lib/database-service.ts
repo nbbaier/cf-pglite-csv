@@ -20,7 +20,8 @@ export async function fetchTablePreview(
 	limit: number = DEFAULT_PREVIEW_LIMIT,
 ) {
 	const sanitized = sanitizeSqlIdentifier(tableName);
-	const query = `SELECT * FROM "${sanitized}" LIMIT ${limit}`;
+	const safeLimit = Math.min(Math.max(1, limit), 10000);
+	const query = `SELECT * FROM "${sanitized}" LIMIT ${safeLimit}`;
 	const result: Results = await db.query<Record<string, unknown>>(query);
 	return { result, sanitizedTableName: sanitized, query };
 }
@@ -28,6 +29,14 @@ export async function fetchTablePreview(
 export async function runQuery(db: DatabaseClient, query: string) {
 	const result = await db.query<Record<string, unknown>>(query);
 	console.log(result);
+
+	// Add safety check for large result sets
+	if (result.rows && result.rows.length > 10000) {
+		console.warn(
+			`Large result set detected: ${result.rows.length} rows. Consider adding LIMIT to your query.`,
+		);
+	}
+
 	return result;
 }
 

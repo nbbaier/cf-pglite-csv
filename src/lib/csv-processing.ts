@@ -1,7 +1,7 @@
 import Papa from "papaparse";
 import type { CSVRow } from "./types";
 
-type CSVProcessingOptions = {
+export type CSVProcessingOptions = {
 	maxRows: number;
 	maxColumns: number;
 	maxCellSize: number;
@@ -13,7 +13,7 @@ const DEFAULT_OPTIONS: CSVProcessingOptions = {
 	maxCellSize: 10_000,
 };
 
-type CSVPipelineResult = {
+export type CSVPipelineResult = {
 	tableName: string;
 	columns: string[];
 	rows: CSVRow[];
@@ -75,6 +75,16 @@ function validateStructure(raw: RawCSV, options: CSVProcessingOptions) {
 
 	if (rows.length > options.maxRows) {
 		throw new Error(`Too many rows. Maximum ${options.maxRows} allowed.`);
+	}
+
+	for (const row of rows) {
+		for (const value of Object.values(row)) {
+			if (typeof value === "string" && value.length > options.maxCellSize) {
+				throw new Error(
+					`Cell value exceeds maximum size of ${options.maxCellSize} characters.`,
+				);
+			}
+		}
 	}
 }
 

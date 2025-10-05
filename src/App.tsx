@@ -33,7 +33,7 @@ import {
 	importCSV,
 	listTables,
 } from "@/lib/database-service";
-import type { CSVRow } from "@/lib/types";
+import { withToast } from "@/lib/toast-utils";
 
 const dbGlobal = await PGlite.create({
 	extensions: { live },
@@ -61,23 +61,21 @@ export default function Page() {
 	}, [db]);
 
 	const handleTableClick = async (tableName: string) => {
-		try {
-			const { result, sanitizedTableName, query } = await fetchTablePreview(
-				db,
-				tableName,
-			);
-
-			React.startTransition(() => {
-				setEditorContent(query);
-				setUploadedData(result);
-				setCurrentTableName(sanitizedTableName);
-			});
-
-			toast.success(`Loaded data from table "${sanitizedTableName}"`);
-		} catch (err) {
-			console.error("[App] Error loading table:", err);
-			toast.error(err instanceof Error ? err.message : "Failed to load table data");
-		}
+		await withToast(() => fetchTablePreview(db, tableName), {
+			successMessage: ({ sanitizedTableName }) =>
+				`Loaded data from table "${sanitizedTableName}"`,
+			onSuccess: ({ result, sanitizedTableName, query }) => {
+				React.startTransition(() => {
+					setEditorContent(query);
+					setUploadedData(result);
+					setCurrentTableName(sanitizedTableName);
+				});
+			},
+			onError: (error) => {
+				console.error("[App] Error loading table:", error);
+			},
+			fallbackErrorMessage: "Failed to load table data",
+		});
 	};
 
 	const handleRunSampleQuery = () => {
@@ -102,8 +100,6 @@ export default function Page() {
 			toast.success(`Table "${metadata.sanitizedTableName}" created and data imported`, {
 				id: toastId,
 			});
-
-			console.debug("[App] Upload complete!");
 		} catch (err) {
 			console.error("[App] Error during upload:", err);
 
@@ -114,80 +110,65 @@ export default function Page() {
 	};
 
 	const handleRunQuery = async (query: string) => {
-		try {
-			console.log(query);
-			const result = await executeQuery(db, query);
-
-			React.startTransition(() => {
-				setUploadedData(result);
-			});
-
-			toast.success("Query executed successfully");
-		} catch (err) {
-			console.error("[App] Error executing query:", err);
-			toast.error(err instanceof Error ? err.message : "Failed to execute query");
-		}
+		if (!query.trim()) return;
+		await withToast(
+			async () => {
+				return executeQuery(db, query);
+			},
+			{
+				successMessage: "Query executed successfully",
+				onSuccess: (result) => {
+					React.startTransition(() => {
+						setUploadedData(result);
+					});
+				},
+				onError: (error) => {
+					console.error("[App] Error executing query:", error);
+				},
+				fallbackErrorMessage: "Failed to execute query",
+			},
+		);
 	};
 
 	const handleDropTable = async (tableName: string) => {
-		try {
-			const { tables, sanitizedTableName } = await dropTableService(db, tableName);
+		await withToast(() => dropTableService(db, tableName), {
+			successMessage: ({ sanitizedTableName }) =>
+				`Table "${sanitizedTableName}" dropped successfully`,
+			onSuccess: ({ tables, sanitizedTableName }) => {
+				React.startTransition(() => {
+					setTableList(tables);
 
-			React.startTransition(() => {
-				setTableList(tables);
-
-				if (currentTableName === tableName || currentTableName === sanitizedTableName) {
-					setUploadedData(null);
-					setEditorContent("");
-					setCurrentTableName(null);
-				}
-			});
-
-			toast.success(`Table "${sanitizedTableName}" dropped successfully`);
-		} catch (err) {
-			console.error("[App] Error dropping table:", err);
-			toast.error(err instanceof Error ? err.message : "Failed to drop table");
-		}
-	};
-
-	const handleUploadClick = () => {
-		fileInputRef.current?.click();
-	};
-
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const files = e.target.files;
-		if (files && files.length > 0) {
-			const file = files[0];
-
-			processCSVFile(file)
-				.then(handleFileProcessed)
-				.catch((err) => {
-					console.error("Error processing CSV file:", err);
-					toast.error(err instanceof Error ? err.message : "Failed to process CSV file");
+					if (currentTableName === tableName || currentTableName === sanitizedTableName) {
+						setUploadedData(null);
+						setEditorContent("");
+						setCurrentTableName(null);
+					}
 				});
-		}
-
-		e.target.value = "";
+			},
+			onError: (error) => {
+				console.error("[App] Error dropping table:", error);
+			},
+			fallbackErrorMessage: "Failed to drop table",
+		});
 	};
 
 	const handleGetSchema = async (tableName: string) => {
-		try {
-			const result = await getSchemaService(db, tableName);
+		const result = await withToast(() => getSchemaService(db, tableName), {
+			onError: (error) => {
+				console.error("Error fetching schema:", error);
+			},
+			fallbackErrorMessage: "Failed to fetch table schema",
+		});
 
-			const schemaData = result.rows || [];
-			return schemaData as Array<{
-				column_name: string;
-				data_type: string;
-				character_maximum_length: string | null;
-				is_nullable: string;
-				column_default: string | null;
-				is_primary_key: string;
-			}>;
-		} catch (error) {
-			console.error("Error fetching schema:", error);
-			toast.error("Failed to fetch table schema");
-			throw error;
-		}
+		const schemaData = result.rows || [];
+		return schemaData as Array<{
+			column_name: string;
+			data_type: string;
+			character_maximum_length: string | null;
+			is_nullable: string;
+			column_default: string | null;
+			is_primary_key: string;
+		}>;
 	};
 
 	return (

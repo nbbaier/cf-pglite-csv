@@ -86,16 +86,26 @@ export function DataTableToolbar<TData>({ table }: DataTablePaginationProps<TDat
 						<ChevronsRight />
 					</Button>
 					<Select
-						value={`${table.getState().pagination.pageSize}`}
+						value={
+							table.getState().pagination.pageSize ===
+							table.getFilteredRowModel().rows.length
+								? "All"
+								: `${table.getState().pagination.pageSize}`
+						}
 						onValueChange={(value) => {
-							table.setPageSize(Number(value));
+							if (value === "All") {
+								const rowLength = table.getFilteredRowModel().rows.length;
+								table.setPageSize(rowLength);
+							} else {
+								table.setPageSize(Number(value));
+							}
 						}}
 					>
 						<SelectTrigger className="h-8 border-0 ring-0 shadow-none focus:ring-0">
 							<SelectValue placeholder={table.getState().pagination.pageSize} />
 						</SelectTrigger>
 						<SelectContent side="top">
-							{[10, 20, 30, 40, 50].map((pageSize) => (
+							{[10, 20, 30, 40, 50, "All"].map((pageSize) => (
 								<SelectItem key={pageSize} value={`${pageSize}`}>
 									{pageSize}
 								</SelectItem>

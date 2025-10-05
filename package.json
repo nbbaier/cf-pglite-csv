@@ -50,6 +50,7 @@
 		"@biomejs/biome": "2.2.5",
 		"@cloudflare/vite-plugin": "^1.13.10",
 		"@cloudflare/workers-types": "^4.20251004.0",
+		"@octokit/rest": "^22.0.0",
 		"@types/bun": "^1.2.23",
 		"@types/node": "^24.6.2",
 		"@types/papaparse": "^5.3.16",

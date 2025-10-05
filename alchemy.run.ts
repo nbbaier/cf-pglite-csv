@@ -1,7 +1,7 @@
 /// <reference types="@types/node" />
 
 import alchemy from "alchemy";
-import { Vite } from "alchemy/cloudflare";
+import { CustomDomain, Vite } from "alchemy/cloudflare";
 import { GitHubComment } from "alchemy/github";
 import { CloudflareStateStore } from "alchemy/state";
 
@@ -14,7 +14,17 @@ export const worker = await Vite("app", {
 	entrypoint: "src/worker.ts",
 });
 
-console.log(`🚀 ${app.name} deployed to ${worker.url}`);
+if (app.stage === "prod") {
+	const domain = await CustomDomain("csv-analyzer", {
+		name: `csv.nicobaier.com`,
+		zoneId: "519111dc05a4ec34cb1fb3f87f485c6a",
+		workerName: worker.name,
+	});
+	console.log("Custom domain created");
+	console.log({ domainUrl: domain.name });
+}
+
+console.log({ url: worker.url });
 
 if (process.env.PULL_REQUEST) {
 	// if this is a PR, add a comment to the PR with the preview URL
@@ -27,7 +37,7 @@ if (process.env.PULL_REQUEST) {
 
       Your changes have been deployed to a preview environment:
 
-      **🌐 Website:** ${worker.url}
+      **🌐 Website:** [${worker.url}](${worker.url})
 
       Built from commit ${process.env.GITHUB_SHA?.slice(0, 7)}
 
@@ -35,4 +45,5 @@ if (process.env.PULL_REQUEST) {
       <sub>🤖 This comment updates automatically with each push.</sub>`,
 	});
 }
+
 await app.finalize();

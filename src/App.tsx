@@ -212,7 +212,7 @@ export default function Page() {
 							</Button>
 						</header>
 						<ResizablePanelGroup direction="vertical">
-							<ResizablePanel defaultSize={40}>
+							<ResizablePanel minSize={20} defaultSize={20}>
 								<div className="flex justify-center items-center h-full">
 									<CodeEditor
 										content={editorContent}
@@ -222,7 +222,7 @@ export default function Page() {
 								</div>
 							</ResizablePanel>
 							<ResizableHandle />
-							<ResizablePanel defaultSize={60}>
+							<ResizablePanel defaultSize={80}>
 								<div className="w-full h-full">
 									{uploadedData ? (
 										<PGLiteTable data={uploadedData} />

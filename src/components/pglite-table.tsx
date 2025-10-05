@@ -78,7 +78,6 @@ export function PGLiteTable({ data }: { data: Results }) {
 			},
 		];
 
-		// Limit columns to prevent UI issues
 		const maxColumns = 50;
 		const fieldsToProcess = data.fields.slice(0, maxColumns);
 

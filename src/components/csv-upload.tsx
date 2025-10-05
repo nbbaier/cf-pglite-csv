@@ -1,8 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { Upload } from "lucide-react";
 import * as React from "react";
-import { processCSVFile } from "@/lib/csv-processing";
-import type { CSVRow } from "@/lib/types";
+import { type CSVPipelineResult, processCSVFile } from "@/lib/csv-processing";
 import { cn } from "@/lib/utils";
 
 const csvUploadVariants = cva(
@@ -30,11 +29,7 @@ const csvUploadVariants = cva(
 interface CSVUploadProps
 	extends Omit<React.HTMLAttributes<HTMLLabelElement>, "onChange">,
 		VariantProps<typeof csvUploadVariants> {
-	onFileProcessed: (data: {
-		tableName: string;
-		columns: string[];
-		rows: CSVRow[];
-	}) => void;
+	onFileProcessed: (data: CSVPipelineResult) => void;
 	multiple?: boolean;
 	maxSize?: number;
 	maxFiles?: number;

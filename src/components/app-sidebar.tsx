@@ -14,7 +14,7 @@ import {
 	SidebarMenuItem,
 	SidebarRail,
 } from "@/components/ui/sidebar";
-import type { CSVRow } from "@/lib/types";
+import type { CSVPipelineResult } from "@/lib/csv-processing";
 import { CSVUpload } from "./csv-upload";
 import { DropTableDialog } from "./drop-table-dialog";
 import { ModeToggle } from "./mode-toggle";
@@ -26,12 +26,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-
-type CSVData = {
-	tableName: string;
-	columns: string[];
-	rows: CSVRow[];
-};
 
 export type SchemaData = {
 	column_name: string;
@@ -46,11 +40,7 @@ type AddSidebarProps = {
 	database: PGliteWithLive;
 	tables: string[];
 	onTableClick: (tableName: string) => void;
-	onFileProcessed: (data: {
-		tableName: string;
-		columns: string[];
-		rows: CSVRow[];
-	}) => void;
+	onFileProcessed: (data: CSVPipelineResult) => void;
 	onDropTable: (tableName: string) => void;
 	onGetSchema: (tableName: string) => Promise<SchemaData[]>;
 };
@@ -73,7 +63,7 @@ export function AppSidebar({
 		onTableClick(tableName);
 	};
 
-	const handleFileProcessed = (data: CSVData) => {
+	const handleFileProcessed = (data: CSVPipelineResult) => {
 		onFileProcessed(data);
 	};
 

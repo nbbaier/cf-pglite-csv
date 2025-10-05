@@ -1,4 +1,4 @@
-import { sql } from "@codemirror/lang-sql";
+import { PostgreSQL, sql } from "@codemirror/lang-sql";
 import { Prec } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
@@ -31,7 +31,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 	};
 
 	const extensions = [
-		sql(),
+		sql({ dialect: PostgreSQL }),
 		Prec.high(
 			keymap.of([
 				{

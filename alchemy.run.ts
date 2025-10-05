@@ -17,6 +17,7 @@ export const worker = await Vite("app", {
 console.log(`🚀 ${app.name} deployed to ${worker.url}`);
 
 if (process.env.PULL_REQUEST) {
+	// if this is a PR, add a comment to the PR with the preview URL
 	await GitHubComment("preview-comment", {
 		owner: "nbbaier",
 		repository: "cf-pglite-csv",

@@ -14,8 +14,8 @@ describe("processCSVFile", () => {
 		expect(result.tableName).toBe("my_data");
 		expect(result.columns).toEqual(["Name", "Age"]);
 		expect(result.rows).toEqual([
-			["Alice", "30"],
-			["Bob", "40"],
+			{ Name: "Alice", Age: 30 },
+			{ Name: "Bob", Age: 40 },
 		]);
 	});
 
@@ -30,12 +30,13 @@ describe("processCSVFile", () => {
 		).rejects.toThrow(/too many columns/i);
 	});
 
-	it("throws when row length does not match headers", async () => {
-		const csv = ["A,B", "1"].join("\n");
+	it("throws when cell size exceeds maximum", async () => {
+		const longValue = "x".repeat(10001);
+		const csv = `Name,Age\nAlice,${longValue}`.split("\n").join("\n");
 		const file = createCSVFile(csv);
 
 		await expect(processCSVFile(file)).rejects.toThrow(
-			/row length does not match header column count/i,
+			/cell value exceeds maximum size/i,
 		);
 	});
 });

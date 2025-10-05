@@ -13,14 +13,11 @@ type MockDb = {
 	// exec is used when batching in other helpers but not required here.
 };
 
-vi.mock("@/lib/database-utils", async () => {
-	const actual =
-		await vi.importActual<typeof import("@/lib/database-utils")>("@/lib/database-utils");
-	return {
-		...actual,
-		createTableFromCSV: vi.fn(),
-	};
-});
+vi.mock("@/lib/database-utils", () => ({
+	createTableFromCSV: vi.fn(),
+	sanitizeSqlIdentifier: (id: string) => id.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_"),
+	quoteIdent: (id: string) => `"${id.replace(/"/g, '""')}"`,
+}));
 
 const asResults = <T extends Record<string, unknown>>(rows: T[]): Results =>
 	({
@@ -117,7 +114,7 @@ describe("importCSV", () => {
 			rows: [{ name: "Alice" }],
 		});
 
-		expect(createMock).toHaveBeenCalledWith(client, "People", ["name"], [["Alice"]]);
+		expect(createMock).toHaveBeenCalledWith(client, "People", ["name"], [{ name: "Alice" }]);
 		expect(result.metadata.sanitizedTableName).toBe("people");
 		expect(result.preview).toBe(previewResult);
 		expect(result.tables).toEqual(["people", "orders"]);

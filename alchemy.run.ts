@@ -1,7 +1,7 @@
 /// <reference types="@types/node" />
 
 import alchemy from "alchemy";
-import { CustomDomain, Vite } from "alchemy/cloudflare";
+import { CustomDomain, Vite, WranglerJson } from "alchemy/cloudflare";
 import { GitHubComment } from "alchemy/github";
 import { CloudflareStateStore } from "alchemy/state";
 
@@ -23,6 +23,8 @@ if (app.stage === "prod") {
 	console.log("Custom domain created");
 	console.log({ domainUrl: domain.name });
 }
+
+await WranglerJson({ worker });
 
 console.log({ url: worker.url });
 

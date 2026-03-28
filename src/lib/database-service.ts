@@ -1,6 +1,10 @@
 import type { PGlite, Results } from "@electric-sql/pglite";
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
-import { createTableFromCSV, quoteIdent, sanitizeSqlIdentifier } from "./database-utils";
+import {
+  createTableFromCSV,
+  quoteIdent,
+  sanitizeSqlIdentifier,
+} from "./database-utils";
 import type { CSVRow } from "./types";
 
 type DatabaseClient = PGlite | PGliteWithLive;
@@ -8,79 +12,84 @@ type DatabaseClient = PGlite | PGliteWithLive;
 const DEFAULT_PREVIEW_LIMIT = 100;
 
 export async function listTables(db: DatabaseClient) {
-	const tables = await db.query<{ table_name: string }>(
-		"SELECT table_name FROM information_schema.tables WHERE table_schema='public'",
-	);
-	return tables.rows.map((table) => table.table_name);
+  const tables = await db.query<{ table_name: string }>(
+    "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+  );
+  return tables.rows.map((table) => table.table_name);
 }
 
 export async function fetchTablePreview(
-	db: DatabaseClient,
-	tableName: string,
-	limit: number = DEFAULT_PREVIEW_LIMIT,
+  db: DatabaseClient,
+  tableName: string,
+  limit: number = DEFAULT_PREVIEW_LIMIT
 ) {
-	const sanitized = sanitizeSqlIdentifier(tableName);
-	const safeLimit = Math.min(Math.max(1, limit), 10000);
-	const query = `SELECT * FROM ${quoteIdent(sanitized)} LIMIT ${safeLimit}`;
-	const result: Results = await db.query<Record<string, unknown>>(query);
-	return { result, sanitizedTableName: sanitized, query };
+  const sanitized = sanitizeSqlIdentifier(tableName);
+  const safeLimit = Math.min(Math.max(1, limit), 10_000);
+  const query = `SELECT * FROM ${quoteIdent(sanitized)} LIMIT ${safeLimit}`;
+  const result: Results = await db.query<Record<string, unknown>>(query);
+  return { result, sanitizedTableName: sanitized, query };
 }
 
-const MAX_QUERY_ROWS = 50000;
+const MAX_QUERY_ROWS = 50_000;
 
 export async function runQuery(db: DatabaseClient, query: string) {
-	const result = await db.query<Record<string, unknown>>(query);
+  const result = await db.query<Record<string, unknown>>(query);
 
-	if (result.rows && result.rows.length > MAX_QUERY_ROWS) {
-		throw new Error(
-			`Query returned ${result.rows.length} rows, which exceeds the maximum of ${MAX_QUERY_ROWS}. Please add a LIMIT clause to your query.`,
-		);
-	}
+  if (result.rows && result.rows.length > MAX_QUERY_ROWS) {
+    throw new Error(
+      `Query returned ${result.rows.length} rows, which exceeds the maximum of ${MAX_QUERY_ROWS}. Please add a LIMIT clause to your query.`
+    );
+  }
 
-	if (result.rows && result.rows.length > 10000) {
-		console.warn(
-			`Large result set: ${result.rows.length} rows. Consider adding LIMIT for better performance.`,
-		);
-	}
+  if (result.rows && result.rows.length > 10_000) {
+    console.warn(
+      `Large result set: ${result.rows.length} rows. Consider adding LIMIT for better performance.`
+    );
+  }
 
-	return result;
+  return result;
 }
 
 export async function dropTable(db: DatabaseClient, tableName: string) {
-	const sanitizedTableName = sanitizeSqlIdentifier(tableName);
-	await db.query(`DROP TABLE IF EXISTS ${quoteIdent(sanitizedTableName)}`);
-	const tables = await listTables(db);
-	return { tables, sanitizedTableName };
+  const sanitizedTableName = sanitizeSqlIdentifier(tableName);
+  await db.query(`DROP TABLE IF EXISTS ${quoteIdent(sanitizedTableName)}`);
+  const tables = await listTables(db);
+  return { tables, sanitizedTableName };
 }
 
-type ImportCSVParams = {
-	tableName: string;
-	columns: string[];
-	rows: CSVRow[];
-	previewLimit?: number;
-};
+interface ImportCSVParams {
+  columns: string[];
+  previewLimit?: number;
+  rows: CSVRow[];
+  tableName: string;
+}
 
 export async function importCSV(db: DatabaseClient, params: ImportCSVParams) {
-	const { tableName, columns, rows, previewLimit = DEFAULT_PREVIEW_LIMIT } = params;
-	const metadata = await createTableFromCSV(db, tableName, columns, rows);
-	const { result: preview, query } = await fetchTablePreview(
-		db,
-		metadata.sanitizedTableName,
-		previewLimit,
-	);
-	const tables = await listTables(db);
-	return {
-		metadata,
-		preview,
-		query,
-		tables,
-	};
+  const {
+    tableName,
+    columns,
+    rows,
+    previewLimit = DEFAULT_PREVIEW_LIMIT,
+  } = params;
+  const metadata = await createTableFromCSV(db, tableName, columns, rows);
+  const { result: preview, query } = await fetchTablePreview(
+    db,
+    metadata.sanitizedTableName,
+    previewLimit
+  );
+  const tables = await listTables(db);
+  return {
+    metadata,
+    preview,
+    query,
+    tables,
+  };
 }
 
 export async function getSchema(db: DatabaseClient, tableName: string) {
-	const sanitizedTableName = sanitizeSqlIdentifier(tableName);
+  const sanitizedTableName = sanitizeSqlIdentifier(tableName);
 
-	const query = `SELECT
+  const query = `SELECT
     c.column_name,
     c.data_type,
     c.character_maximum_length,
@@ -102,6 +111,8 @@ WHERE
 ORDER BY
     c.ordinal_position;`;
 
-	const result = await db.query<Record<string, unknown>>(query, [sanitizedTableName]);
-	return result;
+  const result = await db.query<Record<string, unknown>>(query, [
+    sanitizedTableName,
+  ]);
+  return result;
 }

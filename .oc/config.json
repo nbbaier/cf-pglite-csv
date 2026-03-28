@@ -9,13 +9,6 @@
     "outputFile": "CHANGELOG.md",
     "model": "claude-sonnet-4-5"
   },
-  "release": {
-    "autoTag": false,
-    "autoPush": false,
-    "tagPrefix": "v"
-  },
-  "general": {
-    "confirmPrompts": true,
-    "verbose": false
-  }
+  "release": { "autoTag": false, "autoPush": false, "tagPrefix": "v" },
+  "general": { "confirmPrompts": true, "verbose": false }
 }

@@ -6,13 +6,13 @@ import alchemy from "alchemy/cloudflare/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-	plugins: [react(), tailwindcss(), alchemy()],
-	resolve: {
-		alias: {
-			"@": path.resolve(__dirname, "./src"),
-		},
-	},
-	optimizeDeps: {
-		exclude: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],
-	},
+  plugins: [react(), tailwindcss(), alchemy()],
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "./src"),
+    },
+  },
+  optimizeDeps: {
+    exclude: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],
+  },
 });

@@ -7,56 +7,56 @@ import { useEffect, useState } from "react";
 import { useResolvedTheme } from "./theme-provider";
 
 interface CodeEditorProps {
-	content: string;
-	onRunQuery?: (query: string) => void;
-	onContentChange?: (content: string) => void;
+  content: string;
+  onContentChange?: (content: string) => void;
+  onRunQuery?: (query: string) => void;
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({
-	content,
-	onRunQuery,
-	onContentChange,
+  content,
+  onRunQuery,
+  onContentChange,
 }) => {
-	const [value, setValue] = useState(content);
-	const resolvedTheme = useResolvedTheme();
+  const [value, setValue] = useState(content);
+  const resolvedTheme = useResolvedTheme();
 
-	useEffect(() => {
-		setValue(content);
-	}, [content]);
+  useEffect(() => {
+    setValue(content);
+  }, [content]);
 
-	const handleRunQuery = () => {
-		if (onRunQuery && value.trim()) {
-			onRunQuery(value);
-		}
-	};
+  const handleRunQuery = () => {
+    if (onRunQuery && value.trim()) {
+      onRunQuery(value);
+    }
+  };
 
-	const extensions = [
-		sql({ dialect: PostgreSQL }),
-		Prec.high(
-			keymap.of([
-				{
-					key: "Mod-Enter",
-					run: () => {
-						handleRunQuery();
-						return true;
-					},
-				},
-			]),
-		),
-	];
+  const extensions = [
+    sql({ dialect: PostgreSQL }),
+    Prec.high(
+      keymap.of([
+        {
+          key: "Mod-Enter",
+          run: () => {
+            handleRunQuery();
+            return true;
+          },
+        },
+      ])
+    ),
+  ];
 
-	return (
-		<CodeMirror
-			className="w-full h-full"
-			height="100%"
-			width="100%"
-			theme={resolvedTheme}
-			extensions={extensions}
-			value={value}
-			onChange={(value) => {
-				setValue(value);
-				onContentChange?.(value);
-			}}
-		/>
-	);
+  return (
+    <CodeMirror
+      className="h-full w-full"
+      extensions={extensions}
+      height="100%"
+      onChange={(value) => {
+        setValue(value);
+        onContentChange?.(value);
+      }}
+      theme={resolvedTheme}
+      value={value}
+      width="100%"
+    />
+  );
 };

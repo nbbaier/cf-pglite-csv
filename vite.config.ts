@@ -15,7 +15,4 @@ export default defineConfig({
 	optimizeDeps: {
 		exclude: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],
 	},
-	test: {
-		environment: "jsdom",
-	},
 });

@@ -211,7 +211,7 @@ export default function Page() {
 								</KbdGroup>
 							</Button>
 						</header>
-						<ResizablePanelGroup direction="vertical">
+						<ResizablePanelGroup orientation="vertical">
 							<ResizablePanel minSize={20} defaultSize={20}>
 								<div className="flex justify-center items-center h-full">
 									<CodeEditor

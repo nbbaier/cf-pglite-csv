@@ -1,10 +1,6 @@
 {
-  "name": "csv-analyzer",
+  "name": "csv-analyzer-dev",
   "main": "src/worker.ts",
   "compatibility_date": "2025-09-27",
-  "compatibility_flags": [],
-  "assets": {
-    "directory": "dist/client",
-    "binding": "ASSETS"
-  }
+  "compatibility_flags": []
 }

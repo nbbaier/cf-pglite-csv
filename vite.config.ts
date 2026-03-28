@@ -11,6 +11,12 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
     },
+    dedupe: [
+      "@codemirror/state",
+      "@codemirror/view",
+      "@codemirror/language",
+      "@codemirror/lang-sql",
+    ],
   },
   optimizeDeps: {
     exclude: ["@electric-sql/pglite", "@electric-sql/pglite/worker"],

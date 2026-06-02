@@ -1,141 +1,94 @@
 # Agent Guidelines
 
+## Project overview
+
+This is a Bun-managed Vite + React 19 app deployed to Cloudflare Workers via
+Alchemy. It uploads CSV files, imports them into in-browser PGlite/IndexedDB,
+and lets users inspect tables or run SQL queries.
+
+Key areas:
+
+- `src/App.tsx` wires the app shell, PGlite provider, and top-level state.
+- `src/components/` contains React UI; shadcn-style primitives live in
+  `src/components/ui/`.
+- `src/lib/csv-processing.ts` handles CSV parsing, table-name sanitization, and
+  schema/type inference.
+- `src/lib/database-service.ts` and `src/lib/database-utils.ts` contain PGlite
+  import/query/schema/drop-table behavior.
+- `src/worker.ts`, `alchemy.run.ts`, and `wrangler.jsonc` cover Cloudflare
+  Worker deployment.
+
 ## Commands
-- **Build:** `npm run build`
-- **Lint:** `npm run lint` (uses Biome)
-- **Check:** `npm run check` (lint + format)
-- **Test:** `npm run test` (Vitest)
-- **Single Test:** `npm run test -- <filename>`
 
-## Code Style
-- **Formatting:** Biome defaults (tabs, double quotes, 90 chars). Run `npm run format`.
-- **Imports:** Use `npm run check:fix` to organize imports. Absolute imports from `@/`.
-- **Naming:** PascalCase for components, camelCase for functions, kebab-case for files.
-- **Types:** Strict TypeScript. Define interfaces/types clearly.
-- **UI:** Shadcn UI + Tailwind CSS (`clsx`, `tailwind-merge`).
-- **Error Handling:** Use async/await. Throw typed errors where possible.
+Use Bun by default. Prefer `bun run <script>` over `npm run <script>`.
 
+- Install dependencies: `bun install`
+- Dev server / Alchemy dev stage: `bun run dev`
+- Build: `bun run build`
+- Preview built app: `bun run preview`
+- Test: `bun run test`
+- Single test file: `bun run test -- <filename>`
+- Lint: `bun run lint`
+- Format: `bun run format`
+- Check lint/format/code quality: `bun run check`
+- Auto-fix lint/format/code quality: `bun run fix`
+- Deploy production: `bun run deploy`
+- Destroy deployed resources: `bun run destroy`
 
-# Ultracite Code Standards
+Choose the narrowest verification that proves the change:
 
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+- CSV/database logic: run the relevant Vitest file under `src/lib/__tests__/`.
+- UI/component changes: run `bun run check`; build if imports, app wiring, or
+  Vite configuration changed.
+- Worker/Alchemy/deploy changes: run `bun run build` and inspect generated
+  deployment config when relevant.
 
-## Quick Reference
+## Code style
 
-- **Format code**: `bun x ultracite fix`
-- **Check for issues**: `bun x ultracite check`
-- **Diagnose setup**: `bun x ultracite doctor`
+- Ultracite/Biome is the source of truth; config lives in `biome.jsonc`.
+- Run `bun run fix` before finishing broad or multi-file edits.
+- Use strict TypeScript. Prefer `unknown` over `any` and narrow values before use.
+- Use `@/` imports for app source.
+- Keep component filenames kebab-case and component names PascalCase.
+- Follow existing shadcn/Tailwind patterns. Use `cn` from `@/lib/utils` for class
+  merging.
+- Avoid barrel files and unrelated re-export layers.
 
-Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+## React and UI conventions
 
----
+- Use function components and hooks; keep hooks at the top level.
+- Prefer existing `src/components/ui/*` primitives before adding new UI pieces.
+- Preserve accessibility: semantic controls, labels, keyboard support, and clear
+  empty/error states.
+- Keep component state local unless it is already shared through the app shell.
+- React 19 is in use; follow existing patterns for refs and transitions.
 
-## Core Principles
+## CSV, PGlite, and SQL conventions
 
-Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
+- Keep CSV parsing and type inference in `src/lib/csv-processing.ts`.
+- Keep database interaction in `src/lib/database-service.ts` or
+  `src/lib/database-utils.ts`.
+- Treat uploaded CSV content, table names, column names, and ad hoc SQL as
+  untrusted input. Preserve existing sanitization and identifier-escaping
+  behavior.
+- Add or update tests in `src/lib/__tests__/` for parsing, type inference, SQL
+  generation, and database behavior.
+- PGlite data is browser-local via IndexedDB; avoid assumptions that data exists
+  server-side.
 
-### Type Safety & Explicitness
+## Cloudflare and Alchemy conventions
 
-- Use explicit types for function parameters and return values when they enhance clarity
-- Prefer `unknown` over `any` when the type is genuinely unknown
-- Use const assertions (`as const`) for immutable values and literal types
-- Leverage TypeScript's type narrowing instead of type assertions
-- Use meaningful variable names instead of magic numbers - extract constants with descriptive names
-
-### Modern JavaScript/TypeScript
-
-- Use arrow functions for callbacks and short functions
-- Prefer `for...of` loops over `.forEach()` and indexed `for` loops
-- Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
-- Prefer template literals over string concatenation
-- Use destructuring for object and array assignments
-- Use `const` by default, `let` only when reassignment is needed, never `var`
-
-### Async & Promises
-
-- Always `await` promises in async functions - don't forget to use the return value
-- Use `async/await` syntax instead of promise chains for better readability
-- Handle errors appropriately in async code with try-catch blocks
-- Don't use async functions as Promise executors
-
-### React & JSX
-
-- Use function components over class components
-- Call hooks at the top level only, never conditionally
-- Specify all dependencies in hook dependency arrays correctly
-- Use the `key` prop for elements in iterables (prefer unique IDs over array indices)
-- Nest children between opening and closing tags instead of passing as props
-- Don't define components inside other components
-- Use semantic HTML and ARIA attributes for accessibility:
-  - Provide meaningful alt text for images
-  - Use proper heading hierarchy
-  - Add labels for form inputs
-  - Include keyboard event handlers alongside mouse events
-  - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
-
-### Error Handling & Debugging
-
-- Remove `console.log`, `debugger`, and `alert` statements from production code
-- Throw `Error` objects with descriptive messages, not strings or other values
-- Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
-- Prefer early returns over nested conditionals for error cases
-
-### Code Organization
-
-- Keep functions focused and under reasonable cognitive complexity limits
-- Extract complex conditions into well-named boolean variables
-- Use early returns to reduce nesting
-- Prefer simple conditionals over nested ternary operators
-- Group related code together and separate concerns
-
-### Security
-
-- Add `rel="noopener"` when using `target="_blank"` on links
-- Avoid `dangerouslySetInnerHTML` unless absolutely necessary
-- Don't use `eval()` or assign directly to `document.cookie`
-- Validate and sanitize user input
-
-### Performance
-
-- Avoid spread syntax in accumulators within loops
-- Use top-level regex literals instead of creating them in loops
-- Prefer specific imports over namespace imports
-- Avoid barrel files (index files that re-export everything)
-- Use proper image components (e.g., Next.js `<Image>`) over `<img>` tags
-
-### Framework-Specific Guidance
-
-**Next.js:**
-- Use Next.js `<Image>` component for images
-- Use `next/head` or App Router metadata API for head elements
-- Use Server Components for async data fetching instead of async Client Components
-
-**React 19+:**
-- Use ref as a prop instead of `React.forwardRef`
-
-**Solid/Svelte/Vue/Qwik:**
-- Use `class` and `for` attributes (not `className` or `htmlFor`)
-
----
+- Deployment infrastructure is defined in `alchemy.run.ts`.
+- Worker entrypoint is `src/worker.ts`; the current Worker API surface is small,
+  so avoid adding backend behavior unless the task explicitly needs it.
+- Do not hard-code secrets. Use environment/config bindings where possible.
+- Be careful with changes to custom domains, stage naming, state storage, and PR
+  preview comments.
 
 ## Testing
 
-- Write assertions inside `it()` or `test()` blocks
-- Avoid done callbacks in async tests - use async/await instead
-- Don't use `.only` or `.skip` in committed code
-- Keep test suites reasonably flat - avoid excessive `describe` nesting
-
-## When Biome Can't Help
-
-Biome's linter will catch most issues automatically. Focus your attention on:
-
-1. **Business logic correctness** - Biome can't validate your algorithms
-2. **Meaningful naming** - Use descriptive names for functions, variables, and types
-3. **Architecture decisions** - Component structure, data flow, and API design
-4. **Edge cases** - Handle boundary conditions and error states
-5. **User experience** - Accessibility, performance, and usability considerations
-6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
-
----
-
-Most formatting and common issues are automatically fixed by Biome. Run `bun x ultracite fix` before committing to ensure compliance.
+- Tests use Vitest.
+- Keep tests focused and colocated under `src/lib/__tests__/` unless a different
+  layer needs coverage.
+- Do not commit `.only` or `.skip`.
+- Prefer async/await over callback-style tests.

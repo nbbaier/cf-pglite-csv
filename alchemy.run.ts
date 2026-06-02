@@ -6,7 +6,10 @@ import { GitHubComment } from "alchemy/github";
 import { CloudflareStateStore } from "alchemy/state";
 
 const app = await alchemy("csv-analyzer", {
-  stateStore: (scope) => new CloudflareStateStore(scope),
+  stateStore:
+    process.env.NODE_ENV === "production"
+      ? (scope) => new CloudflareStateStore(scope)
+      : undefined,
   adopt: true,
 });
 

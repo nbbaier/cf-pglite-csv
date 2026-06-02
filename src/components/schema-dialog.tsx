@@ -50,55 +50,45 @@ export function SchemaDialog({
   const schemaColumns: ColumnDef<SchemaDisplayData>[] = [
     {
       accessorKey: "is_primary_key",
-      cell: ({ row }) => {
-        return (
-          <div className="flex items-center justify-center">
-            {row.getValue("is_primary_key") === "YES" ? (
-              <KeyIcon className="size-4" />
-            ) : (
-              ""
-            )}
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          {row.getValue("is_primary_key") === "YES" ? (
+            <KeyIcon className="size-4" />
+          ) : (
+            ""
+          )}
+        </div>
+      ),
       header: "",
     },
     {
       accessorKey: "column_name",
-      cell: ({ row }) => {
-        return <div>{row.getValue("column_name")}</div>;
-      },
+      cell: ({ row }) => <div>{row.getValue("column_name")}</div>,
       header: "Column Name",
     },
     {
       accessorKey: "data_type",
-      cell: ({ row }) => {
-        return <div>{row.getValue("data_type")}</div>;
-      },
+      cell: ({ row }) => <div>{row.getValue("data_type")}</div>,
       header: "Data Type",
     },
     {
       accessorKey: "is_nullable",
-      cell: ({ row }) => {
-        return (
-          <div>{row.getValue("is_nullable") === "YES" ? "" : "not null"}</div>
-        );
-      },
+      cell: ({ row }) => (
+        <div>{row.getValue("is_nullable") === "YES" ? "" : "not null"}</div>
+      ),
       header: "Nullable",
     },
   ];
 
-  const schemaDisplayData = schemaData.map((data) => {
-    return {
-      column_name: data.column_name,
-      data_type:
-        data.data_type === "character varying"
-          ? `varchar(${data.character_maximum_length})`
-          : data.data_type,
-      is_nullable: data.is_nullable,
-      is_primary_key: data.is_primary_key,
-    };
-  });
+  const schemaDisplayData = schemaData.map((data) => ({
+    column_name: data.column_name,
+    data_type:
+      data.data_type === "character varying"
+        ? `varchar(${data.character_maximum_length})`
+        : data.data_type,
+    is_nullable: data.is_nullable,
+    is_primary_key: data.is_primary_key,
+  }));
 
   return (
     <Dialog onOpenChange={setDialogOpen} open={dialogOpen}>

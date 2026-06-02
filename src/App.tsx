@@ -124,23 +124,18 @@ export default function Page() {
     if (!query.trim()) {
       return;
     }
-    await withToast(
-      async () => {
-        return await executeQuery(db, query);
+    await withToast(async () => await executeQuery(db, query), {
+      successMessage: "Query executed successfully",
+      onSuccess: (result) => {
+        React.startTransition(() => {
+          setUploadedData(result);
+        });
       },
-      {
-        successMessage: "Query executed successfully",
-        onSuccess: (result) => {
-          React.startTransition(() => {
-            setUploadedData(result);
-          });
-        },
-        onError: (error) => {
-          console.error("[App] Error executing query:", error);
-        },
-        fallbackErrorMessage: "Failed to execute query",
-      }
-    );
+      onError: (error) => {
+        console.error("[App] Error executing query:", error);
+      },
+      fallbackErrorMessage: "Failed to execute query",
+    });
   };
 
   const handleDropTable = async (tableName: string) => {

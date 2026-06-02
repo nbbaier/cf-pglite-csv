@@ -43,19 +43,17 @@ export function DataTableViewOptions<TData>({
           All columns
         </DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
-        {hideableColumns.map((column) => {
-          return (
-            <DropdownMenuCheckboxItem
-              checked={column.getIsVisible()}
-              key={column.id}
-              onCheckedChange={(value: boolean) =>
-                column.toggleVisibility(!!value)
-              }
-            >
-              {column.id}
-            </DropdownMenuCheckboxItem>
-          );
-        })}
+        {hideableColumns.map((column) => (
+          <DropdownMenuCheckboxItem
+            checked={column.getIsVisible()}
+            key={column.id}
+            onCheckedChange={(value: boolean) =>
+              column.toggleVisibility(!!value)
+            }
+          >
+            {column.id}
+          </DropdownMenuCheckboxItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

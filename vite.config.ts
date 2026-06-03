@@ -6,6 +6,36 @@ import alchemy from "alchemy/cloudflare/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "pglite",
+              test: /node_modules[\\/]@electric-sql[\\/]pglite/,
+            },
+            {
+              name: "codemirror",
+              test: /node_modules[\\/](@codemirror|@uiw[\\/]react-codemirror)/,
+            },
+            {
+              name: "react-vendor",
+              test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+            },
+            {
+              name: "data-grid",
+              test: /node_modules[\\/]@tanstack[\\/]react-table/,
+            },
+            {
+              name: "ui-vendor",
+              test: /node_modules[\\/](@radix-ui|lucide-react|react-resizable-panels)[\\/]/,
+            },
+          ],
+        },
+      },
+    },
+  },
   plugins: [react(), tailwindcss(), alchemy()],
   resolve: {
     alias: {

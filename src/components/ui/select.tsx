@@ -7,10 +7,7 @@ import {
   ScrollDownButton,
   ScrollUpButton,
   Content as SelectContentPrimitive,
-  Group as SelectGroupPrimitive,
   Item as SelectItemPrimitive,
-  Label as SelectLabelPrimitive,
-  Separator as SelectSeparatorPrimitive,
   Trigger as SelectTriggerPrimitive,
   Value,
   Viewport,
@@ -22,12 +19,6 @@ import { cn } from "@/lib/utils";
 
 function Select({ ...props }: ComponentProps<typeof Root>) {
   return <Root data-slot="select" {...props} />;
-}
-
-function SelectGroup({
-  ...props
-}: ComponentProps<typeof SelectGroupPrimitive>) {
-  return <SelectGroupPrimitive data-slot="select-group" {...props} />;
 }
 
 function SelectValue({ ...props }: ComponentProps<typeof Value>) {
@@ -45,7 +36,7 @@ function SelectTrigger({
   return (
     <SelectTriggerPrimitive
       className={cn(
-        "flex w-fit items-center justify-between gap-2 whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[size=default]:h-9 data-[size=sm]:h-8 data-[placeholder]:text-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 dark:bg-input/30 dark:aria-invalid:ring-destructive/40 dark:hover:bg-input/50 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "flex w-fit items-center justify-between gap-2 whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[size=default]:h-9 data-[size=sm]:h-8 data-placeholder:text-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 dark:bg-input/30 dark:aria-invalid:ring-destructive/40 dark:hover:bg-input/50 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className
       )}
       data-size={size}
@@ -84,7 +75,7 @@ function SelectContent({
           className={cn(
             "p-1",
             position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
+              "h-(--radix-select-trigger-height)ll min-w-(--radix-select-trigger-width) scroll-my-1"
           )}
         >
           {children}
@@ -92,19 +83,6 @@ function SelectContent({
         <SelectScrollDownButton />
       </SelectContentPrimitive>
     </Portal>
-  );
-}
-
-function SelectLabel({
-  className,
-  ...props
-}: ComponentProps<typeof SelectLabelPrimitive>) {
-  return (
-    <SelectLabelPrimitive
-      className={cn("px-2 py-1.5 text-muted-foreground text-xs", className)}
-      data-slot="select-label"
-      {...props}
-    />
   );
 }
 
@@ -116,7 +94,7 @@ function SelectItem({
   return (
     <SelectItemPrimitive
       className={cn(
-        "relative flex w-full cursor-default select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "relative flex w-full cursor-default select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
       data-slot="select-item"
@@ -129,19 +107,6 @@ function SelectItem({
       </span>
       <ItemText>{children}</ItemText>
     </SelectItemPrimitive>
-  );
-}
-
-function SelectSeparator({
-  className,
-  ...props
-}: ComponentProps<typeof SelectSeparatorPrimitive>) {
-  return (
-    <SelectSeparatorPrimitive
-      className={cn("pointer-events-none -mx-1 my-1 h-px bg-border", className)}
-      data-slot="select-separator"
-      {...props}
-    />
   );
 }
 
@@ -181,15 +146,4 @@ function SelectScrollDownButton({
   );
 }
 
-export {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectScrollDownButton,
-  SelectScrollUpButton,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-};
+export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue };

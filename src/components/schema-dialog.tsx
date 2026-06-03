@@ -127,7 +127,7 @@ export function SchemaDialog({
   );
 }
 
-export function SchemaTable<TData, TValue>({
+function SchemaTable<TData, TValue>({
   columns,
   data,
   className,

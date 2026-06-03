@@ -6,7 +6,6 @@ import {
   Portal,
   Root,
   Title,
-  Trigger,
 } from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 import type { ComponentProps } from "react";
@@ -15,14 +14,6 @@ import { cn } from "@/lib/utils";
 
 function Sheet({ ...props }: ComponentProps<typeof Root>) {
   return <Root data-slot="sheet" {...props} />;
-}
-
-function SheetTrigger({ ...props }: ComponentProps<typeof Trigger>) {
-  return <Trigger data-slot="sheet-trigger" {...props} />;
-}
-
-function SheetClose({ ...props }: ComponentProps<typeof Close>) {
-  return <Close data-slot="sheet-close" {...props} />;
 }
 
 function SheetPortal({ ...props }: ComponentProps<typeof Portal>) {
@@ -89,16 +80,6 @@ function SheetHeader({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-function SheetFooter({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
-      data-slot="sheet-footer"
-      {...props}
-    />
-  );
-}
-
 function SheetTitle({ className, ...props }: ComponentProps<typeof Title>) {
   return (
     <Title
@@ -122,13 +103,4 @@ function SheetDescription({
   );
 }
 
-export {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-};
+export { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle };

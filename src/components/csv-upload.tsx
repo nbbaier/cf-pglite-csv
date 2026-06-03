@@ -228,4 +228,4 @@ const CSVUpload = ({
   );
 };
 
-export { CSVUpload, csvUploadVariants };
+export { CSVUpload };

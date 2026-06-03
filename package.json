@@ -6,6 +6,7 @@
   "packageManager": "bun@1.3.13",
   "scripts": {
     "build": "vite build",
+    "start": "vite preview",
     "deploy": "NODE_ENV=production alchemy deploy --stage prod",
     "destroy": "NODE_ENV=production alchemy destroy",
     "dev": "alchemy dev --stage dev",

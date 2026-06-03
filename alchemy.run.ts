@@ -7,7 +7,7 @@ import { CloudflareStateStore } from "alchemy/state";
 
 const app = await alchemy("csv-analyzer", {
   stateStore:
-    process.env.NODE_ENV === "production"
+    process.env.CI || process.env.NODE_ENV === "production"
       ? (scope) => new CloudflareStateStore(scope)
       : undefined,
   adopt: true,

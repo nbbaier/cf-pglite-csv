@@ -29,18 +29,21 @@ function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
   );
 }
 
-function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
+function BreadcrumbPage({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<"a">) {
   return (
-    // biome-ignore lint/a11y/useFocusableInteractive: shadcn generated code
-    // biome-ignore lint/a11y/useSemanticElements: shadcn generated code
-    <span
+    <a
       aria-current="page"
       aria-disabled="true"
       className={cn("font-normal text-foreground", className)}
       data-slot="breadcrumb-page"
-      role="link"
       {...props}
-    />
+    >
+      {children}
+    </a>
   );
 }
 

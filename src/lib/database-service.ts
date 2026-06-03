@@ -72,12 +72,10 @@ export async function importCSV(db: DatabaseClient, params: ImportCSVParams) {
     previewLimit = DEFAULT_PREVIEW_LIMIT,
   } = params;
   const metadata = await createTableFromCSV(db, tableName, columns, rows);
-  const { result: preview, query } = await fetchTablePreview(
-    db,
-    metadata.sanitizedTableName,
-    previewLimit
-  );
-  const tables = await listTables(db);
+  const [{ result: preview, query }, tables] = await Promise.all([
+    fetchTablePreview(db, metadata.sanitizedTableName, previewLimit),
+    listTables(db),
+  ]);
   return {
     metadata,
     preview,

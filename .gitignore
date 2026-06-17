@@ -26,3 +26,5 @@ dist-ssr
 .alchemy/
 .env
 .wrangler/
+
+.cursor/hooks/state/continual-learning.json

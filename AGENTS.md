@@ -92,3 +92,20 @@ Choose the narrowest verification that proves the change:
   layer needs coverage.
 - Do not commit `.only` or `.skip`.
 - Prefer async/await over callback-style tests.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues for `nbbaier/cf-pglite-csv`; external PRs are not a
+triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`,
+`ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (`CONTEXT.md` + `docs/adr/` at repo root). See
+`docs/agents/domain.md`.

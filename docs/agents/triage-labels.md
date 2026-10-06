@@ -13,3 +13,5 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
 Edit the right-hand column to match whatever vocabulary you actually use.
+
+These labels are created lazily on GitHub: when a skill first applies a label that does not exist yet, create it with `gh label create` using the description from this table, then apply it. Do not materialize the whole vocabulary upfront.

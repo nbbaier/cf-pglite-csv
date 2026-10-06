@@ -55,5 +55,5 @@ A kind of query the app generates to sample a table's rows; previews are queries
 _Avoid_: Table view
 
 **Sample query**:
-A query the app fills into the editor as a starting point for exploring a table.
+A ready-made query the app fills into the editor and runs to demonstrate query execution.
 _Avoid_: Template query

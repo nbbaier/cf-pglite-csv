@@ -21,7 +21,7 @@ Single-context repo (this repo):
 └── src/
 ```
 
-`GLOSSARY.md` and `docs/adr/` do not exist yet; they are created lazily.
+`GLOSSARY.md` and `docs/adr/` exist and grow in place: add terms to the glossary and decisions to `docs/adr/` rather than starting parallel files.
 
 ## Use the glossary's vocabulary
 
